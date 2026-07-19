@@ -1,0 +1,37 @@
+<script>
+
+function login(){
+
+    let username=document.getElementById("username").value;
+
+    let password=document.getElementById("password").value;
+
+    google.script.run
+
+    .withSuccessHandler(function(res){
+
+        if(res.success){
+
+            document.getElementById("app").innerHTML=
+
+            "<h2>Selamat Datang</h2>"+
+
+            "<h3>"+res.nama+"</h3>"+
+
+            "<p>"+res.role+"</p>"+
+
+            "<p>Cabang : "+res.cabang+"</p>";
+
+        }else{
+
+            document.getElementById("status").innerHTML=res.message;
+
+        }
+
+    })
+
+    .login(username,password);
+
+}
+
+</script>
