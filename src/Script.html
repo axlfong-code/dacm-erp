@@ -26,8 +26,52 @@
       });
     }
 
+    function notify(message, type, options) {
+      options = options || {};
+      type = type || 'info';
+      var container = document.getElementById('app-toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'app-toast-container';
+        container.className = 'app-toast-container';
+        container.setAttribute('aria-live', 'polite');
+        document.body.appendChild(container);
+      }
+      var toast = document.createElement('div');
+      toast.className = 'app-toast app-toast-' + type;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      var icons = { success:'✓', error:'!', warning:'!', info:'i' };
+      toast.innerHTML =
+        '<span class="app-toast-icon">' + escapeHtml(icons[type] || icons.info) + '</span>' +
+        '<div class="app-toast-content"><strong></strong><p></p><div class="app-toast-actions"></div></div>' +
+        '<button type="button" class="app-toast-close" aria-label="Tutup notifikasi">×</button>';
+      toast.querySelector('strong').textContent = options.title || (type === 'success' ? 'Berhasil' : type === 'error' ? 'Terjadi kesalahan' : type === 'warning' ? 'Perhatian' : 'Informasi');
+      toast.querySelector('p').textContent = String(message || '');
+      var actions = toast.querySelector('.app-toast-actions');
+      if (options.actionText && typeof options.onAction === 'function') {
+        var actionButton = document.createElement('button');
+        actionButton.type = 'button';
+        actionButton.className = 'app-toast-action';
+        actionButton.textContent = options.actionText;
+        actionButton.addEventListener('click', function () {
+          options.onAction();
+          toast.remove();
+        });
+        actions.appendChild(actionButton);
+      }
+      function dismiss() {
+        toast.classList.add('is-leaving');
+        setTimeout(function () { if (toast.parentNode) toast.remove(); }, 180);
+      }
+      toast.querySelector('.app-toast-close').addEventListener('click', dismiss);
+      container.appendChild(toast);
+      requestAnimationFrame(function () { toast.classList.add('is-visible'); });
+      setTimeout(dismiss, Number(options.duration || (type === 'error' ? 7000 : 4500)));
+      return toast;
+    }
+
     function failure(error) {
-      alert((error && error.message) || error || 'Terjadi kesalahan.');
+      notify((error && error.message) || error || 'Terjadi kesalahan.', 'error');
     }
 
     function formData(form) {
@@ -100,17 +144,27 @@
       var registerNewButton = document.getElementById('register-new');
       var workOrderNewButton = document.getElementById('workorder-new');
       var workOrderDashboardButton = document.getElementById('workorder-new-dashboard');
+      var inputWorkOrderNavButton = document.getElementById('input-wo-nav');
       document.getElementById('user-name').textContent = user.nama || 'User';
       document.getElementById('user-role').textContent = user.role || '';
       document.getElementById('welcome-name').textContent = user.nama || 'User';
       document.getElementById('user-initial').textContent = (user.nama || 'U').charAt(0).toUpperCase();
+      var currentRole = String(user.role || '').trim().toUpperCase();
+      Array.prototype.forEach.call(document.querySelectorAll('[data-owner-only]'), function (element) {
+        element.hidden = ['OWNER', 'ADMIN', 'SUPER USER'].indexOf(currentRole) < 0;
+      });
       document.getElementById('logout-button').addEventListener('click', logout);
       document.getElementById('menu-toggle').addEventListener('click', function () {
         document.getElementById('sidebar').classList.toggle('open');
       });
       if (registerNewButton) registerNewButton.addEventListener('click', function (event) { event.stopPropagation(); editRegister({}); });
-      if (workOrderNewButton) workOrderNewButton.addEventListener('click', function (event) { event.stopPropagation(); editWorkOrder(); });
-      if (workOrderDashboardButton) workOrderDashboardButton.addEventListener('click', function (event) { event.stopPropagation(); openView('workorder'); editWorkOrder(); });
+      if (workOrderNewButton) workOrderNewButton.addEventListener('click', function (event) { event.stopPropagation(); openFastWorkOrder(); });
+      if (workOrderDashboardButton) workOrderDashboardButton.addEventListener('click', function (event) { event.stopPropagation(); openFastWorkOrder(); });
+      if (inputWorkOrderNavButton) inputWorkOrderNavButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        openFastWorkOrder();
+      });
       document.addEventListener('click', dashboardClick);
       document.addEventListener('input', dashboardInput);
       document.addEventListener('change', dashboardInput);
@@ -148,6 +202,7 @@
       if (target.hasAttribute('data-register-tab')) { showRegisterTab(target.getAttribute('data-register-tab')); return; }
       if (target.hasAttribute('data-cancel') && target.closest('#register-view')) { closeRegisterFormTab(); return; }
       if (target.hasAttribute('data-invoice-tab')) { showInvoiceTab(target.getAttribute('data-invoice-tab')); return; }
+      if (target.hasAttribute('data-cancel') && target.closest('#payment-form-wrap')) { document.getElementById('payment-form-wrap').hidden = true; return; }
       if (target.hasAttribute('data-cancel') && target.closest('#invoice-view')) { closeInvoiceFormTab(); return; }
       if (target.hasAttribute('data-item-tab')) { showItemTab(target.getAttribute('data-item-tab')); return; }
       if (target.hasAttribute('data-item-close-form')) { closeItemFormTab(); return; }
@@ -162,8 +217,10 @@
       if (target.id === 'register-refresh') { loadRegisters(); return; }
       if (target.hasAttribute('data-register-new-customer')) { createRegisterCustomer(); return; }
       if (target.hasAttribute('data-register-new-vehicle')) { createRegisterVehicle(); return; }
-      if (target.id === 'workorder-new-dashboard') { openView('workorder'); editWorkOrder(); return; }
-      if (target.id === 'workorder-new') { editWorkOrder(); return; }
+      if (target.id === 'workorder-new-dashboard') { openFastWorkOrder(); return; }
+      if (target.id === 'workorder-new') { openFastWorkOrder(); return; }
+      if (target.id === 'mobile-workorder-new') { openFastWorkOrder(); return; }
+      if (target.id === 'mobile-more') { document.getElementById('sidebar').classList.add('open'); return; }
       if (target.hasAttribute('data-wofast-action')) { saveFastWorkOrder(target.getAttribute('data-wofast-action')); return; }
       if (target.hasAttribute('data-wofast-add-line')) { addFastWorkOrderLine(target.getAttribute('data-wofast-add-line')); return; }
       if (target.hasAttribute('data-wofast-remove-line')) { removeFastWorkOrderLine(target); return; }
@@ -178,10 +235,12 @@
       if (target.id === 'invoice-date-clear') { clearInvoiceDateFilter(); return; }
       if (target.id === 'invoice-date-apply') { applyInvoiceDateFilter(); return; }
       if (target.id === 'payment-new') { editPayment(); return; }
+      if (target.id === 'payment-refresh') { loadPayments(); return; }
       if (target.id === 'item-new') { editItem({}); return; }
       if (target.id === 'item-refresh') { loadItems(); return; }
       if (target.id === 'stock-adjust') { adjustStock(); return; }
       if (target.id === 'supplier-new') { editSupplier({}); return; }
+      if (target.id === 'user-new') { editUser({}); return; }
       if (target.id === 'purchase-new') { editPurchase(); return; }
       if (target.id === 'ai-chat-send') { sendAiChatMessage(); return; }
       if (target.hasAttribute('data-ai-execute')) { executeAiAction(target.getAttribute('data-ai-execute'), target); return; }
@@ -192,7 +251,7 @@
       if (target.hasAttribute('data-register-edit')) { google.script.run.withSuccessHandler(editRegister).withFailureHandler(failure).registerGet(target.getAttribute('data-register-edit')); return; }
       if (target.hasAttribute('data-register-proceed')) { proceedRegister(target.getAttribute('data-register-proceed')); return; }
       if (target.hasAttribute('data-register-delete')) { deleteRegister(target.getAttribute('data-register-delete')); return; }
-      if (target.hasAttribute('data-workorder')) { google.script.run.withSuccessHandler(editWorkOrder).withFailureHandler(failure).workOrderGet(target.getAttribute('data-workorder')); return; }
+      if (target.hasAttribute('data-workorder')) { openFastWorkOrder(target.getAttribute('data-workorder')); return; }
       if (target.hasAttribute('data-wo-new-customer')) { createCustomerFromWorkOrder(); return; }
       if (target.hasAttribute('data-wofast-new-customer')) { createFastCustomer(); return; }
       if (target.hasAttribute('data-wo-new-vehicle')) { createVehicleFromWorkOrder(); return; }
@@ -204,11 +263,14 @@
       if (target.hasAttribute('data-workorder-delete')) { deleteWorkOrder(target.getAttribute('data-workorder-delete')); return; }
       if (target.hasAttribute('data-workorder-preset')) { appendWorkOrderPreset(target.getAttribute('data-workorder-preset')); return; }
       if (target.hasAttribute('data-invoice-workorder')) { editInvoice(target.getAttribute('data-invoice-workorder')); return; }
+      if (target.hasAttribute('data-invoice-open')) { openInvoiceDetail(target.getAttribute('data-invoice-open')); return; }
+      if (target.hasAttribute('data-invoice-print')) { window.print(); return; }
       if (target.hasAttribute('data-invoice-delete')) { deleteInvoice(target.getAttribute('data-invoice-delete')); return; }
       if (target.hasAttribute('data-payment-invoice')) { editPayment(target.getAttribute('data-payment-invoice')); return; }
       if (target.hasAttribute('data-payment-delete')) { deletePayment(target.getAttribute('data-payment-delete')); return; }
       if (target.hasAttribute('data-item')) { google.script.run.withSuccessHandler(editItem).withFailureHandler(failure).itemGet(target.getAttribute('data-item')); return; }
       if (target.hasAttribute('data-supplier')) { google.script.run.withSuccessHandler(editSupplier).withFailureHandler(failure).supplierGet(target.getAttribute('data-supplier')); return; }
+      if (target.hasAttribute('data-user')) { google.script.run.withSuccessHandler(editUser).withFailureHandler(failure).userGet(target.getAttribute('data-user')); return; }
       if (target.hasAttribute('data-cancel')) { target.closest('.record-form').parentElement.hidden = true; }
     }
 
@@ -244,6 +306,7 @@
       if (event.target.id === 'item-search' || event.target.id === 'item-category-filter' || event.target.id === 'item-type-filter' || event.target.id === 'item-status-filter') loadItems();
       if (event.target.id === 'stock-search') loadStock();
       if (event.target.id === 'supplier-search') loadSuppliers();
+      if (event.target.id === 'user-search') loadUsers();
       if (event.target.id === 'purchase-search') loadPurchases();
     }
 
@@ -354,18 +417,24 @@
     function openView(view) {
       Array.prototype.forEach.call(document.querySelectorAll('.view'), function (el) { el.hidden = el.id !== view + '-view'; });
       Array.prototype.forEach.call(document.querySelectorAll('.nav-item[data-view]'), function (el) { el.classList.toggle('active', el.getAttribute('data-view') === view); });
-      document.getElementById('page-title').textContent = ({ dashboard:'Dashboard', customers:'Pelanggan', vehicles:'Kendaraan', register:'Register', workorder:'Work Order', wofast:'WO Cepat', invoice:'Invoice', payment:'Pembayaran', items:'Stok Barang', stock:'Stok', suppliers:'Supplier', purchase:'Pembelian', ai:'Chat AI' })[view] || 'DACM ERP';
+      document.getElementById('page-title').textContent = ({ dashboard:'Dashboard', customers:'Pelanggan', vehicles:'Kendaraan', register:'Register', workorder:'Work Order', wofast:'Input WO', invoice:'Invoice', payment:'Pembayaran', items:'Barang & Jasa', stock:'Persediaan', suppliers:'Supplier', users:'User', purchase:'Pembelian', ai:'Chat AI' })[view] || 'DACM ERP';
       document.getElementById('sidebar').classList.remove('open');
+      var mobileNewButton = document.getElementById('mobile-workorder-new');
+      if (mobileNewButton) mobileNewButton.hidden = view !== 'workorder';
+      Array.prototype.forEach.call(document.querySelectorAll('.mobile-bottom-nav [data-view]'), function(button) {
+        button.classList.toggle('active', button.getAttribute('data-view') === view);
+      });
       if (view === 'customers') loadCustomers();
       if (view === 'vehicles') { populateVehicleFilters(); loadVehicles(); }
       if (view === 'register') loadRegisters();
       if (view === 'workorder') { resetWorkOrderListFilters(); populateWorkOrderCustomerFilter(true); loadWorkOrders('list'); }
-      if (view === 'wofast') renderFastWorkOrder();
+      if (view === 'wofast' && !fastWorkOrderLoadingExisting) renderFastWorkOrder();
       if (view === 'invoice') loadInvoices();
       if (view === 'payment') loadPayments();
       if (view === 'items') loadItems();
       if (view === 'stock') loadStock();
       if (view === 'suppliers') loadSuppliers();
+      if (view === 'users') loadUsers();
       if (view === 'purchase') loadPurchases();
       if (view === 'ai') bindAiChat();
     }
@@ -1058,6 +1127,51 @@
     }
 
     var fastWorkOrderPayload = null;
+    var fastWorkOrderLoadingExisting = false;
+
+    function prepareFastWorkOrderTab(workOrderNo) {
+      openView('workorder');
+      var formTab = document.getElementById('workorder-form-tab');
+      var formWrap = document.getElementById('workorder-form-wrap');
+      if (formTab) {
+        formTab.innerHTML = escapeHtml(workOrderNo || 'Input WO') + ' <span data-wo-close-form="list">&times;</span>';
+        formTab.hidden = false;
+      }
+      if (formWrap) {
+        formWrap.innerHTML = '<div id="wofast-status" class="loading">Menyiapkan Input WO…</div><div id="wofast-wrap"></div>';
+      }
+      showWorkOrderTab('list', 'form');
+    }
+
+    function openFastWorkOrder(workOrderNo) {
+      workOrderNo = String(workOrderNo || '').trim();
+      if (!workOrderNo) {
+        prepareFastWorkOrderTab('');
+        renderFastWorkOrder();
+        return;
+      }
+      fastWorkOrderLoadingExisting = true;
+      prepareFastWorkOrderTab(workOrderNo);
+      var status = document.getElementById('wofast-status');
+      var wrap = document.getElementById('wofast-wrap');
+      if (wrap) wrap.innerHTML = '';
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'Memuat ' + workOrderNo + '…';
+      }
+      google.script.run.withSuccessHandler(function (record) {
+        fastWorkOrderLoadingExisting = false;
+        if (!record) {
+          failure('Work Order ' + workOrderNo + ' tidak ditemukan.');
+          openView('workorder');
+          return;
+        }
+        renderFastWorkOrder(record);
+      }).withFailureHandler(function (error) {
+        fastWorkOrderLoadingExisting = false;
+        failure(error);
+      }).workOrderGet(workOrderNo);
+    }
 
     function fastWorkOrderItems() {
       return [
@@ -1084,23 +1198,103 @@
         '</div>';
     }
 
-    function fastWorkOrderActionButtons() {
-      return '<div class="wofast-payment"><strong>Metode Bayar</strong>' +
-        '<label><input type="checkbox" name="PaymentCash" value="CASH"> Cash</label>' +
-        '<label><input type="checkbox" name="PaymentQris" value="QRIS"> QRIS</label></div>' +
-        '<div class="actions wofast-actions">' +
-        '<button type="button" class="button primary" data-wofast-action="WORK">KERJAKAN</button>' +
-        '<button type="button" class="button success" data-wofast-action="PAID">LUNAS</button>' +
-        '<button type="button" class="button secondary" data-wofast-action="PENDING">PENDING</button>' +
-        '<button type="button" class="button secondary" data-wofast-action="CLOSE">CLOSE</button>' +
+    function fastWorkOrderActionButtons(record) {
+      return '<div class="wofast-actions-v2">' +
+        '<button type="button" class="wofast-action-card save" data-wofast-action="INVOICE"><b>&#128196;</b><span><strong>SELESAI &amp; BUAT INVOICE</strong><small>Selesaikan WO dan buka invoice</small></span></button>' +
+        '<button type="button" class="wofast-action-card work" data-wofast-action="WORK"><b>&#9654;</b><span><strong>KERJAKAN</strong><small>Mulai pengerjaan sekarang</small></span></button>' +
+        '<button type="button" class="wofast-action-card pending" data-wofast-action="PENDING"><b>&#9719;</b><span><strong>PENDING</strong><small>Tunda / menunggu</small></span></button>' +
+        '<button type="button" class="wofast-action-card close" data-wofast-action="CLOSE"><b>&times;</b><span><strong>TUTUP</strong><small>Batal / tutup form</small></span></button>' +
         '</div>';
     }
 
-    function renderFastWorkOrder() {
+    function fastWorkOrderChecklistHtml() {
+      return ['Jasa', 'Sparepart'].map(function (groupName) {
+        var lines = fastWorkOrderItems().filter(function (item) { return item.group === groupName; }).map(function (item, index) {
+          var id = 'wofast-item-' + groupName.toLowerCase() + '-' + index;
+          return '<div class="wofast-line" data-fast-line><label class="wofast-check"><input type="checkbox" id="' + id + '" data-fast-check data-fast-name="' + escapeHtml(item.name) + '" data-fast-group="' + escapeHtml(item.group) + '"><span>' + escapeHtml(item.name) + '</span></label><input class="wofast-price" data-fast-price type="text" inputmode="numeric" autocomplete="off" placeholder="Harga" disabled></div>';
+        }).join('');
+        return '<section class="wofast-service-card" data-fast-group="' + escapeHtml(groupName) + '">' +
+          '<header><strong><span class="wofast-section-icon">' + (groupName === 'Jasa' ? '&#128295;' : '&#11042;') + '</span>' + escapeHtml(groupName.toUpperCase()) + '</strong>' +
+          '<button type="button" class="wofast-add-text" data-wofast-add-line="' + escapeHtml(groupName) + '">+ Tambah ' + (groupName === 'Jasa' ? 'Jasa' : 'Part') + '</button></header>' +
+          '<div data-fast-lines>' + lines + '</div><footer><span>TOTAL ' + escapeHtml(groupName.toUpperCase()) + '</span><b data-fast-group-total="' + escapeHtml(groupName) + '">Rp 0</b></footer></section>';
+      }).join('');
+    }
+
+    function fastWorkOrderStatusBadge(record) {
+      record = record || {};
+      if (!record.WorkOrderNo) {
+        return '<span class="wofast-status-badge status-new"><i></i>WO BARU</span>';
+      }
+      var status = String(record.Status || 'PENDING').trim().toUpperCase();
+      var map = {
+        PENDING: { label: 'PENDING', css: 'status-pending' },
+        IN_PROGRESS: { label: 'DIKERJAKAN', css: 'status-progress' },
+        CHECK_IN: { label: 'DIKERJAKAN', css: 'status-progress' },
+        DONE: { label: 'SELESAI', css: 'status-done' },
+        FINISHED: { label: 'SELESAI', css: 'status-done' },
+        PAID: { label: 'LUNAS', css: 'status-paid' },
+        CANCELLED: { label: 'DIBATALKAN', css: 'status-cancelled' }
+      };
+      var meta = map[status] || { label: status, css: 'status-pending' };
+      return '<span class="wofast-status-badge ' + meta.css + '"><i></i>' + escapeHtml(meta.label) + '</span>';
+    }
+
+    function fastWorkOrderFormHtml(record, customerOptions, vehicleOptions) {
+      var title = record.WorkOrderNo ? 'Edit ' + record.WorkOrderNo : 'Input Work Order';
+      return '<form id="wofast-form" class="wofast-form wofast-form-v2">' +
+        '<input type="hidden" name="WorkOrderNo" value="' + escapeHtml(record.WorkOrderNo || '') + '">' +
+        '<input type="hidden" name="ApprovalStatus" value="APPROVED">' +
+        '<input type="hidden" name="EstimatedTotal" id="wofast-total-raw" value="0">' +
+        '<input type="hidden" name="Recommendation" id="wofast-recommendation">' +
+        '<datalist id="wofast-customer-list">' + customerOptions + '</datalist>' +
+        '<datalist id="wofast-vehicle-list">' + vehicleOptions + '</datalist>' +
+        '<div class="wofast-v2-title"><div><div class="wofast-title-status"><h2>' + escapeHtml(title.toUpperCase()) + '</h2>' + fastWorkOrderStatusBadge(record) + '</div><p>Input cepat untuk estimasi, pengerjaan, pending, atau penyelesaian WO.</p></div>' +
+        '<div class="wofast-header-fields"><label class="wofast-select"><select name="Branch" aria-label="Cabang"><option value="D">PERINTIS</option><option value="C">CAKALANG</option><option value="M">MAMUJU</option></select></label><label class="wofast-select"><input name="StartDate" type="date" value="' + todayValue() + '" aria-label="Tanggal"></label></div></div>' +
+        '<div class="wofast-v2-layout"><main>' +
+        '<div class="wofast-master-grid">' +
+        '<section class="wofast-master-card"><header><strong><span class="wofast-section-icon">&#128100;</span>CUSTOMER</strong><button type="button" class="lookup-plus-v2" data-wofast-new-customer>+</button></header><div class="wofast-search"><span>&#9906;</span><input id="wofast-customer-search" list="wofast-customer-list" placeholder="Cari customer..." required></div><input type="hidden" id="wofast-customer-id" name="CustomerID"><div id="wofast-customer-summary" class="wofast-selected" hidden></div></section>' +
+        '<section class="wofast-master-card"><header><strong><span class="wofast-section-icon">&#128663;</span>KENDARAAN</strong><button type="button" class="lookup-plus-v2" data-wofast-new-vehicle>+</button></header><div class="wofast-search"><span>&#9906;</span><input id="wofast-vehicle-search" list="wofast-vehicle-list" placeholder="Cari kendaraan..." required></div><input type="hidden" id="wofast-vehicle-id" name="VehicleID"><div id="wofast-vehicle-summary" class="wofast-selected" hidden></div></section>' +
+        '</div><div id="wofast-inline-master-wrap"></div>' +
+        '<section class="wofast-complaint"><strong><span class="wofast-section-icon">&#128172;</span>KELUHAN CUSTOMER</strong><div><input name="Complaint" maxlength="200" placeholder="Contoh: AC tidak dingin, hembusan lemah, ada bunyi." required><small>0 / 200</small></div></section>' +
+        '<div class="wofast-services">' + fastWorkOrderChecklistHtml() + '</div>' +
+        '<section class="wofast-notes-v2"><strong><span class="wofast-section-icon">&#128203;</span>CATATAN</strong><input class="wofast-notes" name="Notes" maxlength="200" placeholder="Catatan tambahan teknisi / instruksi khusus (opsional)."></section>' +
+        '</main><aside class="wofast-sidebar">' +
+        '<section><h3><span class="wofast-section-icon">&#9638;</span>RINGKASAN</h3><div class="wofast-stat"><span>Total Jasa</span><b id="wofast-jasa-count">0</b></div><div class="wofast-stat"><span>Total Sparepart</span><b id="wofast-sparepart-count">0</b></div><div class="wofast-grand"><span>TOTAL ESTIMASI</span><strong id="wofast-total">Rp 0</strong></div></section>' +
+        '<section><h3><span class="wofast-section-icon">&#128203;</span>INFORMASI TAMBAHAN</h3><label>No. WO (Otomatis)<strong class="wofast-auto-no">' + escapeHtml(record.WorkOrderNo || 'Dibuat saat disimpan') + '</strong></label><label>Teknisi<select name="TechnicianID"><option value="">Pilih Teknisi</option></select></label><label>Prioritas<select name="Priority"><option value="NORMAL">Normal</option><option value="HIGH">Tinggi</option><option value="URGENT">Mendesak</option></select></label></section>' +
+        '</aside></div>' + fastWorkOrderActionButtons(record) + '</form>';
+    }
+
+    function renderFastWorkOrder(record) {
+      record = record || {};
       var wrap = document.getElementById('wofast-wrap');
       var status = document.getElementById('wofast-status');
       if (!wrap) return;
-      if (status) { status.hidden = false; status.textContent = 'Memuat format WO cepat…'; }
+      if (status) { status.hidden = false; status.textContent = 'Memuat form Input WO...'; }
+      google.script.run.withSuccessHandler(function (payload) {
+        fastWorkOrderPayload = payload || { customers: [], vehicles: [] };
+        if (status) status.hidden = true;
+        var customerOptions = uniqueLookupOptions((fastWorkOrderPayload.customers || []).map(function (c) {
+          return { id: c.CustomerID, label: customerLookupLabel(c) };
+        })).map(function (item) { return '<option value="' + escapeHtml(item.label) + '"></option>'; }).join('');
+        var vehicleOptions = uniqueLookupOptions((fastWorkOrderPayload.vehicles || []).map(function (v) {
+          return { id: v.VehicleID, label: vehicleLookupLabel(v) };
+        })).map(function (item) { return '<option value="' + escapeHtml(item.label) + '"></option>'; }).join('');
+        wrap.innerHTML = fastWorkOrderFormHtml(record, customerOptions, vehicleOptions);
+        hydrateFastWorkOrder(record);
+        bindFastWorkOrderLookup();
+        updateFastSelectedCards();
+        updateFastWorkOrderTotal();
+      }).withFailureHandler(function (error) {
+        if (status) status.textContent = (error && error.message) || error || 'Gagal memuat Input WO.';
+      }).workOrderFormOptions();
+    }
+
+    function renderFastWorkOrderLegacy(record) {
+      record = record || {};
+      var wrap = document.getElementById('wofast-wrap');
+      var status = document.getElementById('wofast-status');
+      if (!wrap) return;
+      if (status) { status.hidden = false; status.textContent = 'Memuat form Input WO…'; }
       google.script.run.withSuccessHandler(function (payload) {
         fastWorkOrderPayload = payload || { customers: [], vehicles: [] };
         if (status) status.hidden = true;
@@ -1117,12 +1311,76 @@
           }).join('');
           return '<div class="wofast-group" data-fast-group="' + escapeHtml(groupName) + '"><div class="wofast-group-title"><span>' + escapeHtml(groupName) + '</span><button type="button" class="wofast-line-add" data-wofast-add-line="' + escapeHtml(groupName) + '" title="Tambah baris ' + escapeHtml(groupName) + '" aria-label="Tambah baris ' + escapeHtml(groupName) + '">+</button></div><div data-fast-lines>' + lines + '</div></div>';
         }).join('');
-        wrap.innerHTML = '<form id="wofast-form" class="wofast-form"><datalist id="wofast-customer-list">' + customerOptions + '</datalist><datalist id="wofast-vehicle-list">' + vehicleOptions + '</datalist><div class="wofast-header"><div><strong>Format Nota Cepat</strong><p class="muted">Input cepat untuk estimasi, pengerjaan, pending, atau langsung lunas.</p></div><div class="wofast-header-fields"><label class="wofast-select"><select name="Branch" aria-label="Cabang" title="Cabang"><option value="D" selected>PERINTIS</option><option value="C">CAKALANG</option><option value="M">MAMUJU</option></select></label><label class="wofast-select"><input name="StartDate" type="date" value="' + todayValue() + '" aria-label="Pickup Date" title="Pickup Date"></label></div></div><div class="wofast-grid"><div class="lookup-row wide"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="wofast-customer-search" list="wofast-customer-list" placeholder="Cari customer existing" required><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wofast-new-customer>+</button></div><input type="hidden" id="wofast-customer-id" name="CustomerID"></div><div class="lookup-row wide"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="wofast-vehicle-search" list="wofast-vehicle-list" placeholder="Cari kendaraan existing" required><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wofast-new-vehicle>+</button></div><input type="hidden" id="wofast-vehicle-id" name="VehicleID"></div><div id="wofast-inline-master-wrap" class="wide"></div><div class="wide"><input name="Complaint" placeholder="Keluhan customer" required></div></div><div class="wofast-checklist"><div class="wofast-checklist-head"><strong>Checklist Pekerjaan</strong><span>Centang dan isi harga seperti nota manual</span></div><div class="wofast-groups">' + checklist + '</div></div><input class="wofast-notes" name="Notes" placeholder="Catatan"><div class="wofast-summary"><input type="hidden" name="ApprovalStatus" value="APPROVED"><input type="hidden" name="EstimatedTotal" id="wofast-total-raw" value="0"><input type="hidden" name="Recommendation" id="wofast-recommendation"><strong>Total Estimasi</strong><span id="wofast-total">Rp 0</span></div>' + fastWorkOrderActionButtons() + '</form>';
+        wrap.innerHTML = '<form id="wofast-form" class="wofast-form"><input type="hidden" name="WorkOrderNo" value="' + escapeHtml(record.WorkOrderNo || '') + '"><datalist id="wofast-customer-list">' + customerOptions + '</datalist><datalist id="wofast-vehicle-list">' + vehicleOptions + '</datalist><div class="wofast-header"><div><strong>' + escapeHtml(record.WorkOrderNo ? 'Edit ' + record.WorkOrderNo : 'Input Work Order') + '</strong><p class="muted">Input cepat untuk estimasi, pengerjaan, pending, atau langsung lunas.</p></div><div class="wofast-header-fields"><label class="wofast-select"><select name="Branch" aria-label="Cabang" title="Cabang"><option value="D">PERINTIS</option><option value="C">CAKALANG</option><option value="M">MAMUJU</option></select></label><label class="wofast-select"><input name="StartDate" type="date" value="' + todayValue() + '" aria-label="Pickup Date" title="Pickup Date"></label></div></div><div class="wofast-grid"><div class="lookup-row wide"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="wofast-customer-search" list="wofast-customer-list" placeholder="Cari customer existing" required><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wofast-new-customer>+</button></div><input type="hidden" id="wofast-customer-id" name="CustomerID"></div><div class="lookup-row wide"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="wofast-vehicle-search" list="wofast-vehicle-list" placeholder="Cari kendaraan existing" required><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wofast-new-vehicle>+</button></div><input type="hidden" id="wofast-vehicle-id" name="VehicleID"></div><div id="wofast-inline-master-wrap" class="wide"></div><div class="wide"><input name="Complaint" placeholder="Keluhan customer" required></div></div><div class="wofast-checklist"><div class="wofast-checklist-head"><strong>Checklist Pekerjaan</strong><span id="wofast-checklist-help">Pilih customer dan kendaraan terlebih dahulu</span></div><div class="wofast-groups">' + checklist + '</div></div><input class="wofast-notes" name="Notes" placeholder="Catatan"><div class="wofast-summary"><input type="hidden" name="ApprovalStatus" value="APPROVED"><input type="hidden" name="EstimatedTotal" id="wofast-total-raw" value="0"><input type="hidden" name="Recommendation" id="wofast-recommendation"><strong>Total Estimasi</strong><span id="wofast-total">Rp 0</span></div>' + fastWorkOrderActionButtons() + '</form>';
+        hydrateFastWorkOrder(record);
         bindFastWorkOrderLookup();
         updateFastWorkOrderTotal();
       }).withFailureHandler(function (error) {
-        if (status) status.textContent = (error && error.message) || error || 'Gagal memuat WO Cepat.';
+        if (status) status.textContent = (error && error.message) || error || 'Gagal memuat Input WO.';
       }).workOrderFormOptions();
+    }
+
+    function hydrateFastWorkOrder(record) {
+      if (!record || !record.WorkOrderNo || !fastWorkOrderPayload) return;
+      var form = document.getElementById('wofast-form');
+      if (!form) return;
+      var customer = (fastWorkOrderPayload.customers || []).filter(function (item) {
+        return String(item.CustomerID) === String(record.CustomerID);
+      })[0];
+      var vehicle = (fastWorkOrderPayload.vehicles || []).filter(function (item) {
+        return String(item.VehicleID) === String(record.VehicleID);
+      })[0];
+      var customerSearch = document.getElementById('wofast-customer-search');
+      var customerId = document.getElementById('wofast-customer-id');
+      var vehicleSearch = document.getElementById('wofast-vehicle-search');
+      var vehicleId = document.getElementById('wofast-vehicle-id');
+      if (customerSearch && customer) customerSearch.value = customerLookupLabel(customer);
+      if (customerId) customerId.value = record.CustomerID || '';
+      if (vehicleSearch && vehicle) vehicleSearch.value = vehicleLookupLabel(vehicle);
+      if (vehicleId) vehicleId.value = record.VehicleID || '';
+      if (form.elements.Branch) form.elements.Branch.value = record.Branch || 'D';
+      if (form.elements.StartDate) form.elements.StartDate.value = dateInputValue(record.StartDate || todayValue());
+      if (form.elements.Complaint) form.elements.Complaint.value = record.Complaint || record.ComplaintDetail || '';
+      if (form.elements.Notes) form.elements.Notes.value = record.Notes || '';
+
+      var details = Array.isArray(record.WorkOrderItems) ? record.WorkOrderItems.slice() : [];
+      if (!details.length && Number(record.EstimatedTotal || 0) > 0 && (record.WorkItems || record.Recommendation)) {
+        details.push({
+          GroupName: 'Jasa',
+          ItemName: record.WorkItems || record.Recommendation,
+          Price: Number(record.EstimatedTotal || 0),
+          Source: 'CUSTOM'
+        });
+      }
+      details.forEach(function (detail) {
+        var groupName = String(detail.GroupName || 'Jasa').toLowerCase() === 'sparepart' ? 'Sparepart' : 'Jasa';
+        var name = String(detail.ItemName || '').trim();
+        var matchingCheck = Array.prototype.filter.call(form.querySelectorAll('[data-fast-check]'), function (check) {
+          return String(check.getAttribute('data-fast-group') || '').toLowerCase() === groupName.toLowerCase() &&
+            String(check.getAttribute('data-fast-name') || '').trim().toLowerCase() === name.toLowerCase();
+        })[0];
+        var line;
+        if (matchingCheck) {
+          line = matchingCheck.closest('[data-fast-line]');
+        } else {
+          var group = Array.prototype.filter.call(form.querySelectorAll('.wofast-service-card[data-fast-group], .wofast-group[data-fast-group]'), function (element) {
+            return element.getAttribute('data-fast-group') === groupName;
+          })[0];
+          var lines = group && group.querySelector('[data-fast-lines]');
+          if (!lines) return;
+          lines.insertAdjacentHTML('beforeend', fastWorkOrderCustomLine(groupName));
+          line = lines.lastElementChild;
+          matchingCheck = line.querySelector('[data-fast-check]');
+          var description = line.querySelector('[data-fast-description]');
+          if (description) description.value = name;
+        }
+        if (matchingCheck) matchingCheck.checked = true;
+        var price = line && line.querySelector('[data-fast-price]');
+        if (price) {
+          price.disabled = false;
+          price.value = formatThousands(String(Number(detail.Price || detail.Subtotal || 0)));
+        }
+      });
     }
 
     function bindFastWorkOrderLookup() {
@@ -1136,6 +1394,7 @@
         applyFastWorkOrderLookup('vehicle');
       });
       refreshFastVehicleLookupList();
+      updateFastWorkOrderAvailability();
     }
 
     function applyFastWorkOrderLookup(source) {
@@ -1162,6 +1421,48 @@
       if (vehicle && customer && String(vehicle.CustomerID) !== String(customer.CustomerID)) vehicle = null;
       if (vehicleId) vehicleId.value = vehicle ? vehicle.VehicleID : '';
       refreshFastVehicleLookupList(vehicle ? vehicle.VehicleID : '');
+      updateFastSelectedCards();
+      updateFastWorkOrderAvailability();
+    }
+
+    function updateFastSelectedCards() {
+      if (!fastWorkOrderPayload) return;
+      var customerId = String((document.getElementById('wofast-customer-id') || {}).value || '');
+      var vehicleId = String((document.getElementById('wofast-vehicle-id') || {}).value || '');
+      var customer = (fastWorkOrderPayload.customers || []).filter(function (item) {
+        return String(item.CustomerID || '') === customerId;
+      })[0];
+      var vehicle = (fastWorkOrderPayload.vehicles || []).filter(function (item) {
+        return String(item.VehicleID || '') === vehicleId;
+      })[0];
+      var customerSummary = document.getElementById('wofast-customer-summary');
+      var vehicleSummary = document.getElementById('wofast-vehicle-summary');
+      if (customerSummary) {
+        customerSummary.hidden = !customer;
+        customerSummary.innerHTML = customer ? '<div><strong>' + escapeHtml(customer.CustomerName || '-') + '</strong><small>&#9742; ' + escapeHtml(customer.Phone || customer.WhatsApp || '-') + '</small></div><b>&#10003;</b>' : '';
+      }
+      if (vehicleSummary) {
+        var vehicleName = [vehicle && vehicle.Brand, vehicle && vehicle.Model].filter(Boolean).join(' ');
+        vehicleSummary.hidden = !vehicle;
+        vehicleSummary.innerHTML = vehicle ? '<div><strong>' + escapeHtml(vehicleName || vehicle.PlateNumber || '-') + '</strong><small>' + escapeHtml(vehicle.PlateNumber || '-') + (vehicle.Year ? ' &nbsp; | &nbsp; ' + escapeHtml(vehicle.Year) : '') + (vehicle.Color ? ' &nbsp; | &nbsp; ' + escapeHtml(vehicle.Color) : '') + '</small></div><b>&#10003;</b>' : '';
+      }
+    }
+
+    function updateFastWorkOrderAvailability() {
+      var form = document.getElementById('wofast-form');
+      if (!form) return;
+      var customerId = (document.getElementById('wofast-customer-id') || {}).value || '';
+      var vehicleId = (document.getElementById('wofast-vehicle-id') || {}).value || '';
+      var ready = !!customerId && !!vehicleId;
+      var checklist = form.querySelector('.wofast-checklist');
+      if (checklist) checklist.classList.toggle('is-locked', !ready);
+      Array.prototype.forEach.call(form.querySelectorAll('[data-fast-check], [data-wofast-add-line]'), function (control) {
+        if (!ready && control.hasAttribute('data-fast-check')) control.checked = false;
+        control.disabled = !ready;
+      });
+      var help = document.getElementById('wofast-checklist-help');
+      if (help) help.textContent = ready ? 'Centang pekerjaan lalu isi harga' : 'Pilih customer dan kendaraan terlebih dahulu';
+      if (!ready) updateFastWorkOrderTotal();
     }
 
     function refreshFastVehicleLookupList(selectedVehicleId) {
@@ -1222,6 +1523,9 @@
           document.getElementById('wofast-customer-id').value = customer.CustomerID;
           document.getElementById('wofast-vehicle-search').value = '';
           document.getElementById('wofast-vehicle-id').value = '';
+          refreshFastVehicleLookupList();
+          updateFastSelectedCards();
+          updateFastWorkOrderAvailability();
           box.innerHTML = '';
         }).withFailureHandler(function (error) {
           button.disabled = false;
@@ -1253,6 +1557,8 @@
         if (existing) {
           document.getElementById('wofast-vehicle-search').value = vehicleLookupLabel(existing);
           document.getElementById('wofast-vehicle-id').value = existing.VehicleID;
+          updateFastSelectedCards();
+          updateFastWorkOrderAvailability();
           box.innerHTML = '';
           alert('Nomor polisi sudah ada. Kendaraan existing telah dipilih.');
           return;
@@ -1266,6 +1572,8 @@
           refreshFastLookupLists();
           document.getElementById('wofast-vehicle-search').value = vehicleLookupLabel(vehicle);
           document.getElementById('wofast-vehicle-id').value = vehicle.VehicleID;
+          updateFastSelectedCards();
+          updateFastWorkOrderAvailability();
           box.innerHTML = '';
         }).withFailureHandler(function (error) {
           button.disabled = false;
@@ -1276,7 +1584,7 @@
     }
 
     function addFastWorkOrderLine(groupName) {
-      var group = Array.prototype.filter.call(document.querySelectorAll('[data-fast-group]'), function (element) {
+      var group = Array.prototype.filter.call(document.querySelectorAll('.wofast-service-card[data-fast-group], .wofast-group[data-fast-group]'), function (element) {
         return element.getAttribute('data-fast-group') === groupName;
       })[0];
       var lines = group && group.querySelector('[data-fast-lines]');
@@ -1297,6 +1605,8 @@
       var form = document.getElementById('wofast-form');
       if (!form) return;
       var total = 0;
+      var groupTotals = { Jasa: 0, Sparepart: 0 };
+      var groupCounts = { Jasa: 0, Sparepart: 0 };
       var lines = [];
       var detailLines = [];
       Array.prototype.forEach.call(form.querySelectorAll('[data-fast-line]'), function (line) {
@@ -1315,6 +1625,10 @@
         var group = check.getAttribute('data-fast-group') || 'Lainnya';
         var amount = Number(price ? cleanNumber(price.value) : 0) || 0;
         total += amount;
+        if (Object.prototype.hasOwnProperty.call(groupTotals, group)) {
+          groupTotals[group] += amount;
+          groupCounts[group] += 1;
+        }
         lines.push(name + (amount ? ' - ' + rupiah(amount) : ''));
         detailLines.push({
           GroupName: group,
@@ -1331,6 +1645,14 @@
       if (totalRaw) totalRaw.value = total;
       if (totalText) totalText.textContent = rupiah(total);
       if (recommendation) recommendation.value = lines.join('; ');
+      Object.keys(groupTotals).forEach(function (groupName) {
+        var groupTotal = form.querySelector('[data-fast-group-total="' + groupName + '"]');
+        if (groupTotal) groupTotal.textContent = rupiah(groupTotals[groupName]);
+      });
+      var jasaCount = document.getElementById('wofast-jasa-count');
+      var sparepartCount = document.getElementById('wofast-sparepart-count');
+      if (jasaCount) jasaCount.textContent = groupCounts.Jasa;
+      if (sparepartCount) sparepartCount.textContent = groupCounts.Sparepart;
       form.setAttribute('data-fast-lines', JSON.stringify(detailLines));
     }
 
@@ -1348,7 +1670,7 @@
       if (button) { button.disabled = true; button.textContent = 'Menyimpan…'; }
       google.script.run.withSuccessHandler(function () {
         if (button) { button.disabled = false; button.textContent = 'Simpan ke WO'; }
-        alert('WO Cepat berhasil disimpan.');
+        notify('Data Input WO telah tersimpan.', 'success', { title:'WO berhasil disimpan' });
         renderFastWorkOrder();
         refreshWorkOrderViews();
         loadDashboard();
@@ -1371,7 +1693,7 @@
       updateFastWorkOrderTotal();
       if (!document.getElementById('wofast-customer-id').value) { alert('Pilih customer existing dari dropdown dulu.'); return; }
       if (!document.getElementById('wofast-vehicle-id').value) { alert('Pilih kendaraan existing dari dropdown dulu.'); return; }
-      if (!document.getElementById('wofast-recommendation').value) { alert('Centang minimal satu pekerjaan.'); return; }
+      if (action !== 'DRAFT' && !document.getElementById('wofast-recommendation').value) { alert('Centang minimal satu pekerjaan.'); return; }
       var payload = formData(form);
       payload.WorkItemLines = form.getAttribute('data-fast-lines') || '[]';
       payload.Action = action;
@@ -1384,12 +1706,29 @@
       google.script.run.withSuccessHandler(function (result) {
         Array.prototype.forEach.call(form.querySelectorAll('[data-wofast-action]'), function (item) { item.disabled = false; });
         if (button) button.textContent = originalText;
-        var message = 'WO Cepat berhasil disimpan dengan status ' + (result && result.Status || action) + '.';
-        if (result && result.InvoiceNo) message += '\nInvoice: ' + result.InvoiceNo;
-        alert(message);
-        renderFastWorkOrder();
+        var resultStatus = result && result.Status || action;
+        var message = 'Status: ' + resultStatus;
+        if (result && result.WorkOrderNo) message += ' • ' + result.WorkOrderNo;
+        var toastOptions = { title:'WO berhasil disimpan' };
+        if (result && result.InvoiceNo) {
+          message += ' • Invoice ' + result.InvoiceNo;
+          toastOptions.title = 'WO selesai dan invoice dibuat';
+          toastOptions.actionText = 'BUKA INVOICE';
+          toastOptions.duration = 7000;
+          toastOptions.onAction = function () {
+            openView('invoice');
+            editInvoice(result.WorkOrderNo);
+          };
+        }
+        notify(message, 'success', toastOptions);
         refreshWorkOrderViews();
         loadDashboard();
+        if (result && result.InvoiceNo) {
+          openView('invoice');
+          openInvoiceDetail(result.InvoiceNo);
+          return;
+        }
+        renderFastWorkOrder();
       }).withFailureHandler(function (error) {
         Array.prototype.forEach.call(form.querySelectorAll('[data-wofast-action]'), function (item) { item.disabled = false; });
         if (button) button.textContent = originalText;
@@ -1754,7 +2093,12 @@
     }
 
     function workOrderStatusLabel(status) {
-      return status || '';
+      status = String(status || '').toUpperCase();
+      if (status === 'IN_PROGRESS') return 'DIKERJAKAN';
+      if (status === 'DONE') return 'SELESAI';
+      if (status === 'PAID') return 'LUNAS';
+      if (status === 'CANCELLED') return 'BATAL';
+      return status;
     }
 
     function workOrderStatusClass(status) {
@@ -1766,7 +2110,7 @@
     function renderWorkOrderRow(row) {
       var actions = workOrderActions(row);
       var statusLabel = workOrderStatusLabel(row.Status);
-      var statusBadge = statusLabel === 'DONE' ? '' : '<span class="status' + workOrderStatusClass(row.Status) + '">' + escapeHtml(statusLabel) + '</span>';
+      var statusBadge = '<span class="status' + workOrderStatusClass(row.Status) + '">' + escapeHtml(statusLabel) + '</span>';
       return '<tr class="wo-mobile-card">'
         + '<td data-label="WO" class="wo-mobile-main"><strong>' + escapeHtml(row.WorkOrderNo) + '</strong><span class="wo-mobile-head-right">' + statusBadge + '<span class="wo-mobile-inline-actions">' + actions + '</span></span><div class="wo-mobile-summary"><div class="wo-mobile-vehicle-line"><strong>' + escapeHtml(row.PlateNumber) + '</strong><span>' + escapeHtml(row.VehicleName) + '</span></div><div>' + escapeHtml(row.CustomerName) + ' <span class="muted">' + escapeHtml(row.Phone) + '</span></div><div>Keluhan: ' + escapeHtml(row.Complaint) + '</div>' + (row.WorkItems ? '<div>Barang/Jasa: ' + escapeHtml(String(row.WorkItems).replace(/\n+/g, ' • ')) + '</div>' : '') + '</div></td>'
         + '<td data-label="Tanggal" class="wo-mobile-extra">' + escapeHtml(row.StartDateText) + '</td>'
@@ -1802,21 +2146,38 @@
       google.script.run.withSuccessHandler(function (rows) {
         if (isActive) rows = rows.filter(function (row) { return row.Status === 'PENDING' || row.Status === 'IN_PROGRESS'; });
         countEl.textContent = rows.length + (isActive ? ' WO aktif' : ' work order');
+        if (!isActive) {
+          var stats = document.getElementById('workorder-mobile-stats');
+          if (stats) {
+            var pendingCount = rows.filter(function(row) { return row.Status === 'PENDING'; }).length;
+            var progressCount = rows.filter(function(row) { return row.Status === 'IN_PROGRESS'; }).length;
+            var completedCount = rows.filter(function(row) { return row.Status === 'DONE' || row.Status === 'PAID'; }).length;
+            stats.innerHTML = '<article class="all"><b>▣ SEMUA</b><strong>' + rows.length + '</strong><span>Total WO</span></article>'
+              + '<article class="pending"><b>◷ PENDING</b><strong>' + pendingCount + '</strong><span>Menunggu</span></article>'
+              + '<article class="progress"><b>▶ DIKERJAKAN</b><strong>' + progressCount + '</strong><span>Proses</span></article>'
+              + '<article class="done"><b>✓ SELESAI</b><strong>' + completedCount + '</strong><span>Selesai/Lunas</span></article>';
+          }
+        }
         tableEl.innerHTML = rows.length ? rows.map(renderWorkOrderRow).join('') : '<tr><td colspan="8" class="muted">' + (isActive ? 'Tidak ada WO aktif.' : 'Belum ada Work Order.') + '</td></tr>';
       }).withFailureHandler(failure).workOrderList(filter);
     }
 
     function showInvoiceTab(tabName) {
       var listPanel = document.getElementById('invoice-list-panel');
+      var paymentPanel = document.getElementById('invoice-payment-panel');
       var formPanel = document.getElementById('invoice-form-wrap');
       var formTab = document.getElementById('invoice-form-tab');
-      if (!listPanel || !formPanel) return;
+      if (!listPanel || !paymentPanel || !formPanel) return;
       var showForm = tabName === 'form' && formTab && !formTab.hidden;
-      listPanel.hidden = showForm;
+      var showPayments = tabName === 'payments';
+      listPanel.hidden = showForm || showPayments;
+      paymentPanel.hidden = !showPayments;
       formPanel.hidden = !showForm;
       Array.prototype.forEach.call(document.querySelectorAll('[data-invoice-tabs] .module-tab'), function (tab) {
-        tab.classList.toggle('active', (tab.getAttribute('data-invoice-tab') === 'form') === showForm);
+        var name = tab.getAttribute('data-invoice-tab');
+        tab.classList.toggle('active', (showForm && name === 'form') || (showPayments && name === 'payments') || (!showForm && !showPayments && name === 'list'));
       });
+      if (showPayments) loadPayments();
     }
 
     function openInvoiceFormTab(title) {
@@ -1919,8 +2280,8 @@
             return '<option value="' + escapeHtml(wo.WorkOrderNo) + '">' + escapeHtml(wo.WorkOrderNo + ' - ' + wo.PlateNumber + ' - ' + rupiah(wo.EstimatedTotal)) + '</option>';
           }).join('');
           var wrap = document.getElementById('invoice-form-wrap');
-          wrap.innerHTML = '<form id="invoice-select-form" class="record-form"><div class="form-section-title wide">Buka Invoice</div><div class="wide"><label>Work Order selesai</label><select name="WorkOrderNo" required>' + options + '</select></div><div class="actions"><button class="button primary">Lanjut</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
-          openInvoiceFormTab('Invoice');
+          wrap.innerHTML = '<form id="invoice-select-form" class="record-form"><div class="form-section-title wide">New Invoice</div><div class="wide"><label>Work Order selesai dan belum memiliki invoice</label><select name="WorkOrderNo" required>' + options + '</select></div><div class="actions"><button class="button primary">Buat Invoice</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
+          openInvoiceFormTab('New Invoice');
           document.getElementById('invoice-select-form').addEventListener('submit', function (event) {
             event.preventDefault();
             var data = formData(event.target);
@@ -1931,26 +2292,58 @@
         return;
       }
       google.script.run.withSuccessHandler(function (invoice) {
-        var wrap = document.getElementById('invoice-form-wrap');
-        var detailRows = (invoice.Details || []).length ? invoice.Details.map(function (line) {
-          return '<tr><td>' + escapeHtml(line.ItemName || '') + '</td><td>' + escapeHtml(line.GroupName || '') + '</td><td>' + escapeHtml(String(line.Qty || 1)) + '</td><td>' + escapeHtml(rupiah(line.Price || 0)) + '</td><td>' + escapeHtml(rupiah(line.Subtotal || 0)) + '</td></tr>';
-        }).join('') : '<tr><td colspan="5" class="muted">Belum ada detail item.</td></tr>';
-        wrap.innerHTML = '<div class="record-form"><div class="form-section-title wide">Invoice + Pembayaran</div><div><label>No. Invoice</label><input value="' + escapeHtml(invoice.InvoiceNo || '') + '" readonly></div><div><label>Tanggal</label><input value="' + escapeHtml(invoice.InvoiceDateText || '') + '" readonly></div><div><label>No. WO</label><input value="' + escapeHtml(invoice.WorkOrderNo || '') + '" readonly></div><div><label>Customer</label><input value="' + escapeHtml(invoice.CustomerName || '') + '" readonly></div><div><label>Kendaraan</label><input value="' + escapeHtml((invoice.PlateNumber || '') + ' ' + (invoice.VehicleName || '')) + '" readonly></div><div class="wide"><label>Rincian Item</label><div class="table-wrap"><table><thead><tr><th>Item</th><th>Jenis</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead><tbody>' + detailRows + '</tbody></table></div></div><div><label>Total Tagihan</label><input value="' + escapeHtml(rupiah(invoice.GrandTotal || 0)) + '" readonly></div><div><label>Terbayar</label><input value="' + escapeHtml(rupiah(invoice.PaidAmount || 0)) + '" readonly></div><div><label>Sisa</label><input value="' + escapeHtml(rupiah(invoice.Balance || 0)) + '" readonly></div><div><label>Status</label><input value="' + escapeHtml(invoice.Status || '') + '" readonly></div><form id="invoice-payment-form" class="wide" style="display:contents"><input type="hidden" name="InvoiceNo" value="' + escapeHtml(invoice.InvoiceNo || '') + '"><div><label>Tanggal pembayaran</label><input name="PaymentDate" type="date" value="' + todayValue() + '"></div><div><label>Metode</label><select name="Method"><option value="CASH">Tunai</option><option value="QRIS">QRIS</option><option value="CREDIT">Kredit</option></select></div><div><label>Nominal bayar</label><input name="Amount" inputmode="numeric" placeholder="0"></div><div class="wide"><label>Referensi / catatan</label><input name="ReferenceNo" placeholder="Opsional"></div><div class="actions"><button type="submit" class="button primary">Simpan Pembayaran</button><button type="button" class="button secondary" id="invoice-close-only">Tutup</button></div></form></div>';
-        openInvoiceFormTab(invoice.InvoiceNo || 'Invoice');
-        document.getElementById('invoice-close-only').addEventListener('click', function () { closeInvoiceFormTab(); });
-        document.getElementById('invoice-payment-form').addEventListener('submit', function (event) {
-          event.preventDefault();
-          var data = formData(event.target);
-          if (!cleanNumber(data.Amount || '')) { alert('Isi nominal pembayaran dulu.'); return; }
-          google.script.run.withSuccessHandler(function () {
-            closeInvoiceFormTab();
-            loadPayments();
-            loadInvoices();
-            refreshWorkOrderViews();
-            loadDashboard();
-          }).withFailureHandler(failure).paymentSave(data);
-        });
+        renderInvoiceDetail(invoice);
       }).withFailureHandler(failure).invoiceOpenFromWorkOrder(selectedWorkOrderNo);
+    }
+
+    function openInvoiceDetail(invoiceNo) {
+      if (!invoiceNo) return;
+      var wrap = document.getElementById('invoice-form-wrap');
+      wrap.innerHTML = '<div class="loading">Memuat invoice…</div>';
+      openInvoiceFormTab(invoiceNo);
+      google.script.run.withSuccessHandler(renderInvoiceDetail).withFailureHandler(failure).invoiceGet(invoiceNo);
+    }
+
+    function renderInvoiceDetail(invoice) {
+      var wrap = document.getElementById('invoice-form-wrap');
+      var detailRows = (invoice.Details || []).length ? invoice.Details.map(function (line, index) {
+        return '<tr><td class="invoice-line-no">' + escapeHtml(String(line.LineNo || (index + 1))) + '</td><td>' + escapeHtml(line.ItemName || '') + '</td><td class="invoice-number">' + escapeHtml(String(line.Qty || 1)) + '</td><td class="invoice-number">' + escapeHtml(rupiah(line.Price || 0)) + '</td><td class="invoice-number">' + escapeHtml(rupiah(line.Subtotal || 0)) + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="muted">Belum ada rincian barang atau jasa.</td></tr>';
+      var canPay = Number(invoice.Balance || 0) > 0 && String(invoice.Status || '').toUpperCase() !== 'PAID';
+      var status = String(invoice.Status || 'UNPAID').toUpperCase();
+      var paymentButtonLabel = Number(invoice.PaidAmount || 0) > 0 ? 'BAYAR SISA ' + rupiah(invoice.Balance || 0) : 'BAYAR ' + rupiah(invoice.Balance || 0);
+      var paymentForm = canPay
+        ? '<section class="invoice-payment-section"><h3>PEMBAYARAN</h3><form id="invoice-payment-form" class="invoice-payment-form"><input type="hidden" name="InvoiceNo" value="' + escapeHtml(invoice.InvoiceNo || '') + '"><input type="hidden" name="PaymentDate" value="' + todayValue() + '"><div class="invoice-methods"><label class="invoice-method active"><input type="radio" name="Method" value="CASH" checked><span class="invoice-radio"></span><strong>Cash</strong><span>💵</span></label><label class="invoice-method"><input type="radio" name="Method" value="QRIS"><span class="invoice-radio"></span><strong>QRIS</strong><span>▦</span></label><label class="invoice-method"><input type="radio" name="Method" value="CREDIT"><span class="invoice-radio"></span><strong>Kredit</strong><span>▤</span></label></div><div class="invoice-payment-fields"><label><span>Nominal Bayar</span><div class="invoice-amount-wrap"><input name="Amount" inputmode="numeric" value="' + escapeHtml(formatThousands(invoice.Balance || 0)) + '"><small>Sisa tagihan</small></div></label><label><span>Referensi / Catatan <em>(Opsional)</em></span><input name="ReferenceNo" placeholder="Contoh: No. transaksi, catatan, dll"></label></div></form></section>'
+        : '<section class="invoice-paid-message"><strong>✓ Pembayaran Lunas</strong><span>Invoice ini sudah tidak memiliki sisa tagihan.</span></section>';
+      var mainAction = canPay ? '<button type="submit" form="invoice-payment-form" class="invoice-action invoice-action-pay">▣ &nbsp; ' + escapeHtml(paymentButtonLabel) + '</button>' : '';
+      wrap.innerHTML = '<article class="invoice-document" id="invoice-print-area"><header class="invoice-document-head"><div><span class="invoice-kicker">INVOICE</span><h2>' + escapeHtml(invoice.InvoiceNo || '') + '</h2><p>▣ &nbsp;' + escapeHtml(invoice.InvoiceDateText || '') + '<span>' + escapeHtml(invoice.InvoiceTimeText || '') + '</span></p></div><div class="invoice-head-actions"><button type="button" class="invoice-preview" data-invoice-print>▣ &nbsp; Cetak Preview</button><div class="invoice-status-wrap"><span>STATUS</span><strong class="invoice-status invoice-status-' + escapeHtml(status.toLowerCase()) + '">' + escapeHtml(status) + '</strong></div></div></header><section class="invoice-identity"><p><span>●</span><strong>CUSTOMER</strong><b>:</b><em>' + escapeHtml(invoice.CustomerName || '-') + (invoice.CustomerPhone ? ' / ' + escapeHtml(invoice.CustomerPhone) : '') + '</em></p><p><span>▰</span><strong>KENDARAAN</strong><b>:</b><em>' + escapeHtml((invoice.PlateNumber || '-') + ' / ' + (invoice.VehicleName || '-')) + '</em></p><p><span>▣</span><strong>WO</strong><b>:</b><em>' + escapeHtml((invoice.WorkOrderNo || '-') + ' / ' + (invoice.Branch || '-')) + '</em></p></section><section class="invoice-lines"><h3>RINCIAN BARANG &amp; JASA</h3><div class="table-wrap"><table><thead><tr><th>NO</th><th>NAMA ITEM</th><th class="invoice-number">QTY</th><th class="invoice-number">HARGA SATUAN</th><th class="invoice-number">SUBTOTAL</th></tr></thead><tbody>' + detailRows + '</tbody></table></div><div class="invoice-summary"><p><span>TOTAL</span><strong>' + escapeHtml(rupiah(invoice.GrandTotal || 0)) + '</strong></p><p><span>TERBAYAR</span><strong>' + escapeHtml(rupiah(invoice.PaidAmount || 0)) + '</strong></p><p class="invoice-balance"><span>SISA</span><strong>' + escapeHtml(rupiah(invoice.Balance || 0)) + '</strong></p></div></section>' + paymentForm + '<footer class="invoice-actions">' + mainAction + '<button type="button" class="invoice-action invoice-action-print" data-invoice-print>▣ &nbsp; CETAK NOTA</button><button type="button" class="invoice-action invoice-action-close" id="invoice-close-only">× &nbsp; TUTUP</button></footer></article>';
+      openInvoiceFormTab(invoice.InvoiceNo || 'Invoice');
+      document.getElementById('invoice-close-only').addEventListener('click', function () { closeInvoiceFormTab(); });
+      Array.prototype.forEach.call(document.querySelectorAll('.invoice-method input'), function (radio) {
+        radio.addEventListener('change', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.invoice-method'), function (label) { label.classList.remove('active'); });
+          radio.closest('.invoice-method').classList.add('active');
+        });
+      });
+      var amountInput = document.querySelector('#invoice-payment-form [name="Amount"]');
+      if (amountInput) {
+        amountInput.addEventListener('input', function () { amountInput.value = formatThousands(amountInput.value); });
+      }
+      var form = document.getElementById('invoice-payment-form');
+      if (!form) return;
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var data = formData(event.target);
+        data.Amount = cleanNumber(data.Amount || '');
+        if (!data.Amount) { notify('Isi nominal pembayaran dulu.', 'warning'); return; }
+        google.script.run.withSuccessHandler(function () {
+          loadPayments();
+          loadInvoices();
+          refreshWorkOrderViews();
+          loadDashboard();
+          openInvoiceDetail(data.InvoiceNo);
+        }).withFailureHandler(failure).paymentSave(data);
+      });
     }
 
     function loadInvoices() {
@@ -1966,7 +2359,7 @@
       google.script.run.withSuccessHandler(function (rows) {
         document.getElementById('invoice-count').textContent = rows.length + ' invoice';
         document.getElementById('invoice-table').innerHTML = rows.length ? rows.map(function (row) {
-          var actions = (row.Balance > 0 ? '<button class="row-action" data-payment-invoice="' + escapeHtml(row.InvoiceNo) + '">Bayar</button> ' : '') + '<button class="row-action row-action-icon row-action-danger" title="Hapus" aria-label="Hapus" data-invoice-delete="' + escapeHtml(row.InvoiceNo) + '">&#128465;</button>';
+          var actions = '<button class="row-action" data-invoice-open="' + escapeHtml(row.InvoiceNo) + '">Buka</button> ' + (row.Balance > 0 ? '<button class="row-action" data-payment-invoice="' + escapeHtml(row.InvoiceNo) + '">Bayar</button> ' : '') + (Number(row.PaidAmount || 0) <= 0 ? '<button class="row-action row-action-icon row-action-danger" title="Hapus" aria-label="Hapus" data-invoice-delete="' + escapeHtml(row.InvoiceNo) + '">&#128465;</button>' : '');
           return '<tr><td data-label="No. Invoice">' + escapeHtml(row.InvoiceNo) + '</td><td data-label="Tanggal">' + escapeHtml(row.InvoiceDateText) + '</td><td data-label="No. WO">' + escapeHtml(row.WorkOrderNo) + '</td><td data-label="Customer">' + escapeHtml(row.CustomerName) + '</td><td data-label="Kendaraan">' + escapeHtml(row.PlateNumber) + '</td><td data-label="Total">' + rupiah(row.GrandTotal) + '</td><td data-label="Terbayar">' + rupiah(row.PaidAmount) + '</td><td data-label="Sisa">' + rupiah(row.Balance) + '</td><td data-label="Status"><span class="status">' + escapeHtml(row.Status) + '</span></td><td data-label="Aksi">' + actions + '</td></tr>';
         }).join('') : '<tr><td colspan="10" class="muted">Belum ada invoice.</td></tr>';
       }).withFailureHandler(failure).invoiceList(filter);
@@ -1982,6 +2375,7 @@
     }
 
     function editPayment(selectedInvoice) {
+      showInvoiceTab('payments');
       google.script.run.withSuccessHandler(function (invoices) {
         var open = invoices.filter(function (invoice) { return invoice.Balance > 0; });
         var options = '<option value="">Pilih invoice</option>' + open.map(function (invoice) { return '<option value="' + escapeHtml(invoice.InvoiceNo) + '"' + (invoice.InvoiceNo === selectedInvoice ? ' selected' : '') + '>' + escapeHtml(invoice.InvoiceNo + ' - sisa ' + rupiah(invoice.Balance)) + '</option>'; }).join('');
@@ -2060,15 +2454,20 @@
 
     function showItemTab(tabName) {
       var listPanel = document.getElementById('item-list-panel');
+      var stockPanel = document.getElementById('item-stock-panel');
       var formPanel = document.getElementById('item-form-wrap');
       var formTab = document.getElementById('item-form-tab');
-      if (!listPanel || !formPanel) return;
+      if (!listPanel || !stockPanel || !formPanel) return;
       var showForm = tabName === 'form' && formTab && !formTab.hidden;
-      listPanel.hidden = showForm;
+      var showStock = tabName === 'stock';
+      listPanel.hidden = showForm || showStock;
+      stockPanel.hidden = !showStock;
       formPanel.hidden = !showForm;
       Array.prototype.forEach.call(document.querySelectorAll('[data-item-tabs] .module-tab'), function (tab) {
-        tab.classList.toggle('active', (tab.getAttribute('data-item-tab') === 'form') === showForm);
+        var name = tab.getAttribute('data-item-tab');
+        tab.classList.toggle('active', (showForm && name === 'form') || (showStock && name === 'stock') || (!showForm && !showStock && name === 'list'));
       });
+      if (showStock) loadStock();
     }
 
     function openItemFormTab(record) {
@@ -2127,6 +2526,31 @@
           return '<tr><td>' + escapeHtml(row.SupplierID) + '</td><td>' + escapeHtml(row.SupplierName) + '</td><td>' + escapeHtml(row.Phone) + '</td><td>' + escapeHtml(row.ContactPerson) + '</td><td><span class="status">' + escapeHtml(row.Status) + '</span></td><td><button class="row-action" data-supplier="' + escapeHtml(row.SupplierID) + '">Ubah</button></td></tr>';
         }).join('') : '<tr><td colspan="6" class="muted">Belum ada supplier.</td></tr>';
       }).withFailureHandler(failure).supplierList(document.getElementById('supplier-search').value);
+    }
+
+    function editUser(record) {
+      record = record || {};
+      var wrap = document.getElementById('user-form-wrap');
+      var roles = ['OWNER', 'ADMIN', 'SUPER USER', 'USER', 'TECHNICIAN'];
+      var branches = [{ value:'D', label:'PERINTIS' }, { value:'C', label:'CAKALANG' }, { value:'M', label:'MAMUJU' }];
+      var roleOptions = roles.map(function(role) { return '<option value="' + role + '"' + (String(record.Role || 'USER').toUpperCase() === role ? ' selected' : '') + '>' + role + '</option>'; }).join('');
+      var branchOptions = branches.map(function(branch) { return '<option value="' + branch.value + '"' + (String(record.Branch || 'D').toUpperCase() === branch.value ? ' selected' : '') + '>' + branch.label + '</option>'; }).join('');
+      wrap.innerHTML = '<form id="user-form" class="record-form"><input type="hidden" name="UserID" value="' + escapeHtml(record.UserID || '') + '"><div><label>Username</label><input name="Username" required value="' + escapeHtml(record.Username || '') + '"></div><div><label>Nama user</label><input name="FullName" required value="' + escapeHtml(record.FullName || '') + '"></div><div><label>Password' + (record.UserID ? ' (kosongkan jika tidak diubah)' : '') + '</label><input name="Password" type="password"' + (record.UserID ? '' : ' required') + ' autocomplete="new-password"></div><div><label>Role</label><select name="Role">' + roleOptions + '</select></div><div><label>Cabang</label><select name="Branch">' + branchOptions + '</select></div><div><label>Status</label><select name="Status"><option value="ACTIVE"' + (record.Status === 'INACTIVE' ? '' : ' selected') + '>ACTIVE</option><option value="INACTIVE"' + (record.Status === 'INACTIVE' ? ' selected' : '') + '>INACTIVE</option></select></div><div class="actions"><button class="button primary">Simpan User</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
+      wrap.hidden = false;
+      document.getElementById('user-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        google.script.run.withSuccessHandler(function() { wrap.hidden = true; loadUsers(); success('Data user berhasil disimpan.'); }).withFailureHandler(failure).userSave(formData(event.target));
+      });
+    }
+
+    function loadUsers() {
+      var search = document.getElementById('user-search');
+      google.script.run.withSuccessHandler(function(rows) {
+        document.getElementById('user-count').textContent = rows.length + ' user';
+        document.getElementById('user-table').innerHTML = rows.length ? rows.map(function(row) {
+          return '<tr><td>' + escapeHtml(row.UserID) + '</td><td>' + escapeHtml(row.Username) + '</td><td>' + escapeHtml(row.FullName) + '</td><td><span class="status">' + escapeHtml(row.Role) + '</span></td><td>' + escapeHtml(row.Branch) + '</td><td><span class="status">' + escapeHtml(row.Status) + '</span></td><td><button class="row-action row-action-icon" data-user="' + escapeHtml(row.UserID) + '" title="Edit user">✎</button></td></tr>';
+        }).join('') : '<tr><td colspan="7" class="muted">Belum ada user.</td></tr>';
+      }).withFailureHandler(failure).userList(search ? search.value : '');
     }
 
     function editPurchase() {

@@ -17,3 +17,53 @@ const Auth = Object.freeze({
     return (Array.isArray(roles) ? roles : [roles]).indexOf(user.Role) >= 0;
   }
 });
+
+function sanitizeUser_(user) {
+  if (!user) return null;
+  var copy = Object.assign({}, user);
+  delete copy.Password;
+  return copy;
+}
+
+function userList(search) {
+  var keyword = String(search || '').trim().toLowerCase();
+  return Database.all('USERS', { noCache: true }).filter(function(user) {
+    return !keyword || [user.UserID, user.Username, user.FullName, user.Role, user.Branch, user.Status].some(function(value) {
+      return String(value || '').toLowerCase().indexOf(keyword) >= 0;
+    });
+  }).map(sanitizeUser_).sort(function(a, b) {
+    return String(a.FullName || a.Username).localeCompare(String(b.FullName || b.Username));
+  });
+}
+
+function userGet(userId) {
+  return sanitizeUser_(Database.findById('USERS', userId));
+}
+
+function userSave(input) {
+  input = input || {};
+  var username = String(input.Username || '').trim();
+  var password = String(input.Password || '').trim();
+  var data = {
+    Username: username,
+    FullName: String(input.FullName || '').trim(),
+    Role: String(input.Role || 'USER').trim().toUpperCase(),
+    Branch: String(input.Branch || 'D').trim().toUpperCase(),
+    Status: String(input.Status || 'ACTIVE').trim().toUpperCase()
+  };
+  Utils.require(username, 'Username wajib diisi.');
+  Utils.require(data.FullName, 'Nama user wajib diisi.');
+  var duplicate = Database.all('USERS', { noCache: true }).filter(function(user) {
+    return String(user.Username || '').trim().toLowerCase() === username.toLowerCase()
+      && String(user.UserID || '') !== String(input.UserID || '');
+  })[0];
+  if (duplicate) throw new Error('Username sudah digunakan.');
+  if (input.UserID) {
+    if (password) data.Password = password;
+    return sanitizeUser_(Database.update('USERS', input.UserID, data));
+  }
+  Utils.require(password, 'Password wajib diisi untuk user baru.');
+  data.Password = password;
+  data.CreatedAt = new Date();
+  return sanitizeUser_(Database.insert('USERS', data));
+}

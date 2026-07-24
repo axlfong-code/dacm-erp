@@ -20,6 +20,11 @@ const InvoiceModule = Object.freeze({
       workOrders: WorkOrderModule.list({ status: WORK_ORDER_STATUS.DONE }).filter(function(wo) { return !wo.InvoiceNo; })
     };
   },
+  get: function(invoiceNo) {
+    var invoice = Database.findById('INVOICE', String(invoiceNo || '').trim());
+    if (!invoice) throw new Error('Invoice tidak ditemukan.');
+    return enrichInvoice(invoice);
+  },
   create: function(input) {
     input = input || {};
     var workOrder = Database.findById('WORKORDER', input.WorkOrderNo);
@@ -32,7 +37,7 @@ const InvoiceModule = Object.freeze({
     return Database.insert('INVOICE', {
       RegisterNo: workOrder.RegisterNo || '',
       WorkOrderNo: workOrder.WorkOrderNo,
-      InvoiceDate: parseDate(input.InvoiceDate),
+      InvoiceDate: Utils.parseDate(input.InvoiceDate),
       GrandTotal: total,
       Status: 'UNPAID'
     }, generateInvoiceNo(workOrder.Branch, input.InvoiceDate));
@@ -142,9 +147,12 @@ function enrichInvoice(record) {
   return Object.assign({}, record, {
     WorkOrderNo: record.WorkOrderNo || '',
     CustomerName: workOrder ? workOrder.CustomerName : '-',
+    CustomerPhone: workOrder ? (workOrder.Phone || '') : '',
     PlateNumber: workOrder ? workOrder.PlateNumber : (vehicle ? vehicle.PlateNumber : '-'),
     VehicleName: workOrder ? workOrder.VehicleName : '-',
+    Branch: workOrder ? (workOrder.Branch || APP.DEFAULT_BRANCH) : APP.DEFAULT_BRANCH,
     InvoiceDateText: Utils.formatDate(record.InvoiceDate, APP.DATE_FORMAT),
+    InvoiceTimeText: Utils.formatDate(record.CreatedAt || record.InvoiceDate, 'HH:mm'),
     Details: details,
     PaidAmount: paid,
     Balance: grandTotal - paid,
@@ -155,5 +163,6 @@ function enrichInvoice(record) {
 function invoiceList(search) { return InvoiceModule.list(search); }
 function invoiceFormOptions() { return InvoiceModule.formOptions(); }
 function invoiceCreate(data) { return InvoiceModule.create(data); }
+function invoiceGet(invoiceNo) { return InvoiceModule.get(invoiceNo); }
 function invoiceOpenFromWorkOrder(workOrderNo) { return InvoiceModule.openFromWorkOrder(workOrderNo); }
 function invoiceDelete(invoiceNo) { return InvoiceModule.remove(invoiceNo); }

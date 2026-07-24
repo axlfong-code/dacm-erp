@@ -16,7 +16,7 @@ const QCModule = Object.freeze({
     var status = String(input.Status || '').toUpperCase();
     if (['PASS', 'FAIL'].indexOf(status) < 0) throw new Error('Hasil QC harus PASS atau FAIL.');
     var inspector = String(input.InspectorID || '').trim(); Utils.require(inspector, 'Inspector QC wajib diisi.');
-    var qc = Database.insert('QC', { WorkOrderNo: workOrder.WorkOrderNo, QCDate: parseDate(input.QCDate), InspectorID: inspector, Status: status, Notes: String(input.Notes || '').trim() });
+    var qc = Database.insert('QC', { WorkOrderNo: workOrder.WorkOrderNo, QCDate: Utils.parseDate(input.QCDate), InspectorID: inspector, Status: status, Notes: String(input.Notes || '').trim() });
     Database.update('WORKORDER', workOrder.WorkOrderNo, { Status: status === 'PASS' ? 'QC_PASSED' : 'REWORK' });
     Database.update('REGISTER', workOrder.RegisterNo, { Status: status === 'PASS' ? 'COMPLETED' : 'REWORK' });
     return qc;

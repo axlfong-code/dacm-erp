@@ -15,7 +15,7 @@ const PaymentModule = Object.freeze({
     var paid = Database.query('PAYMENT', { InvoiceNo: invoice.InvoiceNo }).reduce(function(total, payment) { return total + Number(payment.Amount || 0); }, 0);
     var balance = Number(invoice.GrandTotal) - paid;
     if (amount > balance) throw new Error('Pembayaran melebihi sisa tagihan (' + balance + ').');
-    var payment = Database.insert('PAYMENT', { InvoiceNo: invoice.InvoiceNo, PaymentDate: parseDate(input.PaymentDate), Method: String(input.Method || '').trim(), Amount: amount, ReferenceNo: String(input.ReferenceNo || '').trim() });
+    var payment = Database.insert('PAYMENT', { InvoiceNo: invoice.InvoiceNo, PaymentDate: Utils.parseDate(input.PaymentDate), Method: String(input.Method || '').trim(), Amount: amount, ReferenceNo: String(input.ReferenceNo || '').trim() });
     var newBalance = balance - amount;
     Database.update('INVOICE', invoice.InvoiceNo, { Status: newBalance === 0 ? 'PAID' : 'PARTIAL' });
     if (newBalance === 0 && invoice.WorkOrderNo) {

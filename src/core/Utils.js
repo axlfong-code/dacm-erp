@@ -1,6 +1,16 @@
 /** Shared, side-effect free helpers. */
 const Utils = Object.freeze({
   now: function() { return new Date(); },
+  parseDate: function(value) {
+    if (!value) return new Date();
+    if (Object.prototype.toString.call(value) === '[object Date]') return value;
+    var parts = String(value).trim().split('-');
+    var date = parts.length === 3
+      ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      : new Date(value);
+    if (isNaN(date.getTime())) throw new Error('Format tanggal tidak valid.');
+    return date;
+  },
   formatDate: function(value, pattern) {
     if (!value) return '';
     return Utilities.formatDate(new Date(value), DATABASE.TIME_ZONE, pattern || APP.DATETIME_FORMAT);

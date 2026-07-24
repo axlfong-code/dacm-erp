@@ -13,7 +13,7 @@ const DiagnosisModule = Object.freeze({
     input = input || {};
     var register = Database.findById('REGISTER', input.RegisterNo);
     if (!register) throw new Error('Register tidak ditemukan.');
-    var data = { RegisterNo: register.RegisterNo, TechnicianID: String(input.TechnicianID || '').trim(), DiagnosisDate: parseDate(input.DiagnosisDate), Finding: String(input.Finding || '').trim(), Recommendation: String(input.Recommendation || '').trim(), Status: 'PENDING_APPROVAL' };
+    var data = { RegisterNo: register.RegisterNo, TechnicianID: String(input.TechnicianID || '').trim(), DiagnosisDate: Utils.parseDate(input.DiagnosisDate), Finding: String(input.Finding || '').trim(), Recommendation: String(input.Recommendation || '').trim(), Status: 'PENDING_APPROVAL' };
     Utils.require(data.TechnicianID, 'Teknisi wajib diisi.'); Utils.require(data.Finding, 'Hasil diagnosa wajib diisi.'); Utils.require(data.Recommendation, 'Rekomendasi perbaikan wajib diisi.');
     var diagnosis = Database.insert('DIAGNOSIS', data);
     Database.update('REGISTER', register.RegisterNo, { Status: 'DIAGNOSED' });

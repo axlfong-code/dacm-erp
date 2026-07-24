@@ -418,23 +418,29 @@ function workOrderCreate(data) { return WorkOrderModule.create(data); }
 function workOrderQuickAction(data) {
   data = data || {};
   var action = String(data.Action || 'PENDING').trim().toUpperCase();
-  if (['WORK', 'PAID', 'PENDING'].indexOf(action) < 0) throw new Error('Aksi WO Cepat tidak valid.');
+  if (['WORK', 'INVOICE', 'PAID', 'PENDING', 'DRAFT'].indexOf(action) < 0) throw new Error('Aksi WO Cepat tidak valid.');
   var selectedVehicle = data.VehicleID ? Database.findById('VEHICLES', String(data.VehicleID).trim()) : null;
   if (selectedVehicle && selectedVehicle.CustomerID) {
     data.CustomerID = selectedVehicle.CustomerID;
   }
 
   var payload = Object.assign({}, data, {
-    Status: action === 'WORK' ? WORK_ORDER_STATUS.IN_PROGRESS : (action === 'PAID' ? WORK_ORDER_STATUS.DONE : WORK_ORDER_STATUS.PENDING),
-    ApprovalStatus: action === 'PENDING' ? WORK_ORDER_APPROVAL.PENDING : WORK_ORDER_APPROVAL.APPROVED,
-    ApprovedAt: action === 'PENDING' ? '' : new Date(),
-    FinishDate: action === 'PAID' ? new Date() : ''
+    Status: action === 'WORK' ? WORK_ORDER_STATUS.IN_PROGRESS : ((action === 'INVOICE' || action === 'PAID') ? WORK_ORDER_STATUS.DONE : WORK_ORDER_STATUS.PENDING),
+    ApprovalStatus: (action === 'PENDING' || action === 'DRAFT') ? WORK_ORDER_APPROVAL.PENDING : WORK_ORDER_APPROVAL.APPROVED,
+    ApprovedAt: (action === 'PENDING' || action === 'DRAFT') ? '' : new Date(),
+    FinishDate: (action === 'INVOICE' || action === 'PAID') ? new Date() : ''
   });
   var workOrder = WorkOrderModule.save(payload);
   var result = {
     WorkOrderNo: workOrder.WorkOrderNo,
-    Status: action === 'WORK' ? 'DIKERJAKAN' : action
+    Status: action === 'WORK' ? 'DIKERJAKAN' : (action === 'DRAFT' ? WORK_ORDER_STATUS.PENDING : action)
   };
+
+  if (action === 'INVOICE') {
+    var createdInvoice = InvoiceModule.openFromWorkOrder(workOrder.WorkOrderNo);
+    result.InvoiceNo = createdInvoice.InvoiceNo;
+    result.Status = WORK_ORDER_STATUS.DONE;
+  }
 
   if (action === 'PAID') {
     var method = String(data.PaymentMethods || '').trim();
@@ -444,16 +450,21 @@ function workOrderQuickAction(data) {
       InvoiceDate: data.StartDate || new Date(),
       GrandTotal: Number(parseMoney(data.EstimatedTotal || 0))
     });
-    PaymentModule.save({
+    var payment = PaymentModule.save({
       InvoiceNo: invoice.InvoiceNo,
       PaymentDate: data.StartDate || new Date(),
       Method: method,
       Amount: Number(invoice.GrandTotal || 0),
       ReferenceNo: ''
     });
+    Database.update('WORKORDER', workOrder.WorkOrderNo, {
+      Status: WORK_ORDER_STATUS.PAID,
+      FinishDate: workOrder.FinishDate || new Date()
+    });
     result.InvoiceNo = invoice.InvoiceNo;
+    result.PaymentNo = payment.PaymentNo;
     result.PaymentMethod = method;
-    result.Status = 'LUNAS';
+    result.Status = WORK_ORDER_STATUS.PAID;
   }
   return result;
 }

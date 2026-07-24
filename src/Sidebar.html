@@ -2,18 +2,20 @@
   <div class="sidebar-brand"><span class="mini-mark">D</span><span>DACM ERP</span></div>
   <nav aria-label="Navigasi utama">
     <button class="nav-item active" data-view="dashboard"><span>D</span> Dashboard</button>
-    <button class="nav-item" data-view="customers"><span>C</span> Pelanggan</button>
-    <button class="nav-item" data-view="vehicles"><span>K</span> Kendaraan</button>
-    <button class="nav-item" data-view="register"><span>R</span> Register</button>
-    <button class="nav-item" data-view="workorder"><span>WO</span> Work Order</button>
-    <button class="nav-item" data-view="wofast"><span>WF</span> WO Cepat</button>
-    <button class="nav-item" data-view="invoice"><span>I</span> Invoice</button>
-    <button class="nav-item" data-view="payment"><span>Rp</span> Pembayaran</button>
-    <button class="nav-item" data-view="items"><span>IT</span> Stok Barang</button>
-    <button class="nav-item" data-view="stock"><span>ST</span> Stok</button>
-    <button class="nav-item" data-view="suppliers"><span>S</span> Supplier</button>
-    <button class="nav-item" data-view="purchase"><span>P</span> Pembelian</button>
     <button class="nav-item" data-view="ai"><span>AI</span> Chat AI</button>
+    <button class="nav-item" data-view="workorder"><span>WO</span> Work Order</button>
+    <button class="nav-item" data-view="invoice"><span>I</span> Invoice</button>
+    <button class="nav-item" data-view="items"><span>BJ</span> Barang &amp; Jasa</button>
+    <button class="nav-item" data-view="purchase"><span>P</span> Pembelian</button>
+    <details class="nav-group" open>
+      <summary class="nav-item"><span>☷</span> Daftar <b>⌄</b></summary>
+      <div class="nav-submenu">
+        <button class="nav-item" data-view="customers"><span>C</span> Pelanggan</button>
+        <button class="nav-item" data-view="vehicles"><span>K</span> Kendaraan</button>
+        <button class="nav-item" data-view="suppliers"><span>S</span> Supplier</button>
+        <button class="nav-item" data-view="users" data-owner-only><span>U</span> User</button>
+      </div>
+    </details>
   </nav>
   <div class="sidebar-footer"><button id="logout-button" class="nav-item"><span>Q</span> Keluar</button></div>
 </aside>
