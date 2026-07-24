@@ -164,7 +164,9 @@
       if (target.hasAttribute('data-register-new-vehicle')) { createRegisterVehicle(); return; }
       if (target.id === 'workorder-new-dashboard') { openView('workorder'); editWorkOrder(); return; }
       if (target.id === 'workorder-new') { editWorkOrder(); return; }
-      if (target.id === 'wofast-save') { saveFastWorkOrder(); return; }
+      if (target.hasAttribute('data-wofast-action')) { saveFastWorkOrder(target.getAttribute('data-wofast-action')); return; }
+      if (target.hasAttribute('data-wofast-add-line')) { addFastWorkOrderLine(target.getAttribute('data-wofast-add-line')); return; }
+      if (target.hasAttribute('data-wofast-remove-line')) { removeFastWorkOrderLine(target); return; }
       if (target.id === 'wofast-reset') { renderFastWorkOrder(); return; }
       if (target.id === 'workorder-date-filter-button') { toggleWorkOrderDateFilter(); return; }
       if (target.id === 'workorder-date-clear') { clearWorkOrderDateFilter(); return; }
@@ -1073,6 +1075,27 @@
       ];
     }
 
+    function fastWorkOrderCustomLine(groupName) {
+      return '<div class="wofast-line wofast-custom-line" data-fast-line>' +
+        '<label class="wofast-check"><input type="checkbox" data-fast-check data-fast-name="" data-fast-group="' + escapeHtml(groupName) + '">' +
+        '<input class="wofast-description" data-fast-description placeholder="Deskripsi ' + escapeHtml(groupName.toLowerCase()) + '"></label>' +
+        '<input class="wofast-price" data-fast-price type="text" inputmode="numeric" autocomplete="off" placeholder="Harga" disabled>' +
+        '<button type="button" class="wofast-line-remove" data-wofast-remove-line title="Hapus baris" aria-label="Hapus baris">&minus;</button>' +
+        '</div>';
+    }
+
+    function fastWorkOrderActionButtons() {
+      return '<div class="wofast-payment"><strong>Metode Bayar</strong>' +
+        '<label><input type="checkbox" name="PaymentCash" value="CASH"> Cash</label>' +
+        '<label><input type="checkbox" name="PaymentQris" value="QRIS"> QRIS</label></div>' +
+        '<div class="actions wofast-actions">' +
+        '<button type="button" class="button primary" data-wofast-action="WORK">KERJAKAN</button>' +
+        '<button type="button" class="button success" data-wofast-action="PAID">LUNAS</button>' +
+        '<button type="button" class="button secondary" data-wofast-action="PENDING">PENDING</button>' +
+        '<button type="button" class="button secondary" data-wofast-action="CLOSE">CLOSE</button>' +
+        '</div>';
+    }
+
     function renderFastWorkOrder() {
       var wrap = document.getElementById('wofast-wrap');
       var status = document.getElementById('wofast-status');
@@ -1092,9 +1115,9 @@
             var id = 'wofast-item-' + groupName.toLowerCase() + '-' + index;
             return '<div class="wofast-line" data-fast-line><label class="wofast-check"><input type="checkbox" id="' + id + '" data-fast-check data-fast-name="' + escapeHtml(item.name) + '" data-fast-group="' + escapeHtml(item.group) + '"><span>' + escapeHtml(item.name) + '</span></label><input class="wofast-price" data-fast-price type="text" inputmode="numeric" autocomplete="off" placeholder="Harga" disabled></div>';
           }).join('');
-          return '<div class="wofast-group"><div class="wofast-group-title">' + escapeHtml(groupName) + '</div>' + lines + '</div>';
+          return '<div class="wofast-group" data-fast-group="' + escapeHtml(groupName) + '"><div class="wofast-group-title"><span>' + escapeHtml(groupName) + '</span><button type="button" class="wofast-line-add" data-wofast-add-line="' + escapeHtml(groupName) + '" title="Tambah baris ' + escapeHtml(groupName) + '" aria-label="Tambah baris ' + escapeHtml(groupName) + '">+</button></div><div data-fast-lines>' + lines + '</div></div>';
         }).join('');
-        wrap.innerHTML = '<form id="wofast-form" class="wofast-form"><datalist id="wofast-customer-list">' + customerOptions + '</datalist><datalist id="wofast-vehicle-list">' + vehicleOptions + '</datalist><div class="wofast-header"><div><strong>Format Nota Cepat</strong><p class="muted">Test input WO seperti nota manual. Tidak mengubah halaman WO lama.</p></div><div class="wofast-header-fields"><label class="wofast-select"><select name="Branch" aria-label="Cabang" title="Cabang"><option value="D" selected>PERINTIS</option><option value="C">CAKALANG</option><option value="M">MAMUJU</option></select></label><label class="wofast-select"><input name="StartDate" type="date" value="' + todayValue() + '" aria-label="Pickup Date" title="Pickup Date"></label></div></div><div class="wofast-grid"><div class="lookup-row wide"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="wofast-customer-search" list="wofast-customer-list" placeholder="Cari customer existing" required><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wofast-new-customer>+</button></div><input type="hidden" id="wofast-customer-id" name="CustomerID"></div><div class="lookup-row wide"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="wofast-vehicle-search" list="wofast-vehicle-list" placeholder="Cari kendaraan existing" required><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wofast-new-vehicle>+</button></div><input type="hidden" id="wofast-vehicle-id" name="VehicleID"></div><div id="wofast-inline-master-wrap" class="wide"></div><div class="wide"><input name="Complaint" placeholder="Keluhan customer" required></div></div><div class="wofast-checklist"><div class="wofast-checklist-head"><strong>Checklist Pekerjaan</strong><span>Centang dan isi harga seperti nota manual</span></div><div class="wofast-groups">' + checklist + '</div></div><input class="wofast-notes" name="Notes" placeholder="Catatan / metode bayar / QRIS"><div class="wofast-summary"><input type="hidden" name="ApprovalStatus" value="APPROVED"><input type="hidden" name="EstimatedTotal" id="wofast-total-raw" value="0"><input type="hidden" name="Recommendation" id="wofast-recommendation"><strong>Total Estimasi</strong><span id="wofast-total">Rp 0</span></div><div class="actions"><button type="button" class="button primary" id="wofast-save">Simpan ke WO</button><button type="button" class="button secondary" id="wofast-reset">Reset</button></div></form>';
+        wrap.innerHTML = '<form id="wofast-form" class="wofast-form"><datalist id="wofast-customer-list">' + customerOptions + '</datalist><datalist id="wofast-vehicle-list">' + vehicleOptions + '</datalist><div class="wofast-header"><div><strong>Format Nota Cepat</strong><p class="muted">Input cepat untuk estimasi, pengerjaan, pending, atau langsung lunas.</p></div><div class="wofast-header-fields"><label class="wofast-select"><select name="Branch" aria-label="Cabang" title="Cabang"><option value="D" selected>PERINTIS</option><option value="C">CAKALANG</option><option value="M">MAMUJU</option></select></label><label class="wofast-select"><input name="StartDate" type="date" value="' + todayValue() + '" aria-label="Pickup Date" title="Pickup Date"></label></div></div><div class="wofast-grid"><div class="lookup-row wide"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="wofast-customer-search" list="wofast-customer-list" placeholder="Cari customer existing" required><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wofast-new-customer>+</button></div><input type="hidden" id="wofast-customer-id" name="CustomerID"></div><div class="lookup-row wide"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="wofast-vehicle-search" list="wofast-vehicle-list" placeholder="Cari kendaraan existing" required><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wofast-new-vehicle>+</button></div><input type="hidden" id="wofast-vehicle-id" name="VehicleID"></div><div id="wofast-inline-master-wrap" class="wide"></div><div class="wide"><input name="Complaint" placeholder="Keluhan customer" required></div></div><div class="wofast-checklist"><div class="wofast-checklist-head"><strong>Checklist Pekerjaan</strong><span>Centang dan isi harga seperti nota manual</span></div><div class="wofast-groups">' + checklist + '</div></div><input class="wofast-notes" name="Notes" placeholder="Catatan"><div class="wofast-summary"><input type="hidden" name="ApprovalStatus" value="APPROVED"><input type="hidden" name="EstimatedTotal" id="wofast-total-raw" value="0"><input type="hidden" name="Recommendation" id="wofast-recommendation"><strong>Total Estimasi</strong><span id="wofast-total">Rp 0</span></div>' + fastWorkOrderActionButtons() + '</form>';
         bindFastWorkOrderLookup();
         updateFastWorkOrderTotal();
       }).withFailureHandler(function (error) {
@@ -1214,6 +1237,24 @@
       });
     }
 
+    function addFastWorkOrderLine(groupName) {
+      var group = Array.prototype.filter.call(document.querySelectorAll('[data-fast-group]'), function (element) {
+        return element.getAttribute('data-fast-group') === groupName;
+      })[0];
+      var lines = group && group.querySelector('[data-fast-lines]');
+      if (!lines) return;
+      lines.insertAdjacentHTML('beforeend', fastWorkOrderCustomLine(groupName));
+      var customLine = lines.lastElementChild;
+      var description = customLine && customLine.querySelector('[data-fast-description]');
+      if (description) description.focus();
+    }
+
+    function removeFastWorkOrderLine(button) {
+      var line = button && button.closest('[data-fast-line]');
+      if (line) line.remove();
+      updateFastWorkOrderTotal();
+    }
+
     function updateFastWorkOrderTotal() {
       var form = document.getElementById('wofast-form');
       if (!form) return;
@@ -1230,7 +1271,9 @@
           if (!checked) price.value = '';
         }
         if (!checked) return;
-        var name = check.getAttribute('data-fast-name') || '';
+        var description = line.querySelector('[data-fast-description]');
+        var name = description ? String(description.value || '').trim() : (check.getAttribute('data-fast-name') || '');
+        if (!name) return;
         var group = check.getAttribute('data-fast-group') || 'Lainnya';
         var amount = Number(price ? cleanNumber(price.value) : 0) || 0;
         total += amount;
@@ -1241,7 +1284,7 @@
           Qty: 1,
           Price: amount,
           Subtotal: amount,
-          Source: 'QUICK'
+          Source: description ? 'CUSTOM' : 'QUICK'
         });
       });
       var totalRaw = document.getElementById('wofast-total-raw');
@@ -1253,7 +1296,7 @@
       form.setAttribute('data-fast-lines', JSON.stringify(detailLines));
     }
 
-    function saveFastWorkOrder() {
+    function legacySaveFastWorkOrder() {
       var form = document.getElementById('wofast-form');
       if (!form) return;
       applyFastWorkOrderLookup();
@@ -1275,6 +1318,45 @@
         if (button) { button.disabled = false; button.textContent = 'Simpan ke WO'; }
         failure(error);
       }).workOrderSave(payload);
+    }
+
+    function saveFastWorkOrder(action) {
+      var form = document.getElementById('wofast-form');
+      if (!form) return;
+      action = String(action || 'PENDING').toUpperCase();
+      if (action === 'CLOSE') {
+        renderFastWorkOrder();
+        openView('dashboard');
+        return;
+      }
+      applyFastWorkOrderLookup();
+      updateFastWorkOrderTotal();
+      if (!document.getElementById('wofast-customer-id').value) { alert('Pilih customer existing dari dropdown dulu.'); return; }
+      if (!document.getElementById('wofast-vehicle-id').value) { alert('Pilih kendaraan existing dari dropdown dulu.'); return; }
+      if (!document.getElementById('wofast-recommendation').value) { alert('Centang minimal satu pekerjaan.'); return; }
+      var payload = formData(form);
+      payload.WorkItemLines = form.getAttribute('data-fast-lines') || '[]';
+      payload.Action = action;
+      payload.PaymentMethods = [payload.PaymentCash, payload.PaymentQris].filter(Boolean).join(' + ');
+      if (action === 'PAID' && !payload.PaymentMethods) { alert('Pilih metode bayar Cash, QRIS, atau keduanya.'); return; }
+      var button = form.querySelector('[data-wofast-action="' + action + '"]');
+      var originalText = button ? button.textContent : '';
+      Array.prototype.forEach.call(form.querySelectorAll('[data-wofast-action]'), function (item) { item.disabled = true; });
+      if (button) button.textContent = 'MENYIMPAN...';
+      google.script.run.withSuccessHandler(function (result) {
+        Array.prototype.forEach.call(form.querySelectorAll('[data-wofast-action]'), function (item) { item.disabled = false; });
+        if (button) button.textContent = originalText;
+        var message = 'WO Cepat berhasil disimpan dengan status ' + (result && result.Status || action) + '.';
+        if (result && result.InvoiceNo) message += '\nInvoice: ' + result.InvoiceNo;
+        alert(message);
+        renderFastWorkOrder();
+        refreshWorkOrderViews();
+        loadDashboard();
+      }).withFailureHandler(function (error) {
+        Array.prototype.forEach.call(form.querySelectorAll('[data-wofast-action]'), function (item) { item.disabled = false; });
+        if (button) button.textContent = originalText;
+        failure(error);
+      }).workOrderQuickAction(payload);
     }
 
     var workOrderLookupPayload = null;

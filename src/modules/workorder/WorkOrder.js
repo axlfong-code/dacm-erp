@@ -415,6 +415,44 @@ function workOrderGet(workOrderNo) { return WorkOrderModule.get(workOrderNo); }
 function workOrderFormOptions() { return WorkOrderModule.formOptions(); }
 function workOrderSave(data) { return WorkOrderModule.save(data); }
 function workOrderCreate(data) { return WorkOrderModule.create(data); }
+function workOrderQuickAction(data) {
+  data = data || {};
+  var action = String(data.Action || 'PENDING').trim().toUpperCase();
+  if (['WORK', 'PAID', 'PENDING'].indexOf(action) < 0) throw new Error('Aksi WO Cepat tidak valid.');
+
+  var payload = Object.assign({}, data, {
+    Status: action === 'WORK' ? WORK_ORDER_STATUS.IN_PROGRESS : (action === 'PAID' ? WORK_ORDER_STATUS.DONE : WORK_ORDER_STATUS.PENDING),
+    ApprovalStatus: action === 'PENDING' ? WORK_ORDER_APPROVAL.PENDING : WORK_ORDER_APPROVAL.APPROVED,
+    ApprovedAt: action === 'PENDING' ? '' : new Date(),
+    FinishDate: action === 'PAID' ? new Date() : ''
+  });
+  var workOrder = WorkOrderModule.save(payload);
+  var result = {
+    WorkOrderNo: workOrder.WorkOrderNo,
+    Status: action === 'WORK' ? 'DIKERJAKAN' : action
+  };
+
+  if (action === 'PAID') {
+    var method = String(data.PaymentMethods || '').trim();
+    if (!method) throw new Error('Metode pembayaran wajib dipilih untuk aksi LUNAS.');
+    var invoice = InvoiceModule.create({
+      WorkOrderNo: workOrder.WorkOrderNo,
+      InvoiceDate: data.StartDate || new Date(),
+      GrandTotal: Number(parseMoney(data.EstimatedTotal || 0))
+    });
+    PaymentModule.save({
+      InvoiceNo: invoice.InvoiceNo,
+      PaymentDate: data.StartDate || new Date(),
+      Method: method,
+      Amount: Number(invoice.GrandTotal || 0),
+      ReferenceNo: ''
+    });
+    result.InvoiceNo = invoice.InvoiceNo;
+    result.PaymentMethod = method;
+    result.Status = 'LUNAS';
+  }
+  return result;
+}
 function workOrderPending(workOrderNo, notes) { return WorkOrderModule.pending(workOrderNo, notes); }
 function workOrderProceed(workOrderNo, notes) { return WorkOrderModule.proceed(workOrderNo, notes); }
 function workOrderFinish(workOrderNo, notes, measurement) { return WorkOrderModule.finish(workOrderNo, notes, measurement); }
