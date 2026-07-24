@@ -1128,11 +1128,17 @@
     function bindFastWorkOrderLookup() {
       var customerInput = document.getElementById('wofast-customer-search');
       var vehicleInput = document.getElementById('wofast-vehicle-search');
-      if (customerInput) customerInput.addEventListener('input', applyFastWorkOrderLookup);
-      if (vehicleInput) vehicleInput.addEventListener('input', applyFastWorkOrderLookup);
+      if (customerInput) customerInput.addEventListener('input', function () {
+        applyFastWorkOrderLookup('customer');
+        refreshFastVehicleLookupList();
+      });
+      if (vehicleInput) vehicleInput.addEventListener('input', function () {
+        applyFastWorkOrderLookup('vehicle');
+      });
+      refreshFastVehicleLookupList();
     }
 
-    function applyFastWorkOrderLookup() {
+    function applyFastWorkOrderLookup(source) {
       if (!fastWorkOrderPayload) return;
       var customerInput = document.getElementById('wofast-customer-search');
       var customerId = document.getElementById('wofast-customer-id');
@@ -1146,8 +1152,40 @@
       var vehicle = (fastWorkOrderPayload.vehicles || []).filter(function (v) {
         return vehicleLookupLabel(v).trim().toLowerCase() === vehicleValue.trim().toLowerCase();
       })[0];
+      if (source === 'vehicle' && vehicle) {
+        customer = (fastWorkOrderPayload.customers || []).filter(function (c) {
+          return String(c.CustomerID) === String(vehicle.CustomerID);
+        })[0] || customer;
+        if (customerInput && customer) customerInput.value = customerLookupLabel(customer);
+      }
       if (customerId) customerId.value = customer ? customer.CustomerID : '';
+      if (vehicle && customer && String(vehicle.CustomerID) !== String(customer.CustomerID)) vehicle = null;
       if (vehicleId) vehicleId.value = vehicle ? vehicle.VehicleID : '';
+      refreshFastVehicleLookupList(vehicle ? vehicle.VehicleID : '');
+    }
+
+    function refreshFastVehicleLookupList(selectedVehicleId) {
+      if (!fastWorkOrderPayload) return;
+      var customerId = (document.getElementById('wofast-customer-id') || {}).value || '';
+      var vehicleInput = document.getElementById('wofast-vehicle-search');
+      var vehicleId = document.getElementById('wofast-vehicle-id');
+      var vehicleList = document.getElementById('wofast-vehicle-list');
+      var vehicles = (fastWorkOrderPayload.vehicles || []).filter(function (vehicle) {
+        return !customerId || String(vehicle.CustomerID) === String(customerId);
+      });
+      if (vehicleList) vehicleList.innerHTML = uniqueLookupOptions(vehicles.map(function (vehicle) {
+        return { label: vehicleLookupLabel(vehicle) };
+      })).map(function (item) {
+        return '<option value="' + escapeHtml(item.label) + '"></option>';
+      }).join('');
+      if (selectedVehicleId) return;
+      var current = vehicles.filter(function (vehicle) {
+        return vehicleInput && vehicleLookupLabel(vehicle).trim().toLowerCase() === String(vehicleInput.value || '').trim().toLowerCase();
+      })[0];
+      if (!current) {
+        if (vehicleInput) vehicleInput.value = '';
+        if (vehicleId) vehicleId.value = '';
+      }
     }
 
     function refreshFastLookupLists() {

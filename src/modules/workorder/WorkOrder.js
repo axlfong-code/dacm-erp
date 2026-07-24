@@ -419,6 +419,10 @@ function workOrderQuickAction(data) {
   data = data || {};
   var action = String(data.Action || 'PENDING').trim().toUpperCase();
   if (['WORK', 'PAID', 'PENDING'].indexOf(action) < 0) throw new Error('Aksi WO Cepat tidak valid.');
+  var selectedVehicle = data.VehicleID ? Database.findById('VEHICLES', String(data.VehicleID).trim()) : null;
+  if (selectedVehicle && selectedVehicle.CustomerID) {
+    data.CustomerID = selectedVehicle.CustomerID;
+  }
 
   var payload = Object.assign({}, data, {
     Status: action === 'WORK' ? WORK_ORDER_STATUS.IN_PROGRESS : (action === 'PAID' ? WORK_ORDER_STATUS.DONE : WORK_ORDER_STATUS.PENDING),
