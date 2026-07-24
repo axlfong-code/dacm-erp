@@ -97,9 +97,6 @@
     }
 
     function bindDashboard(user) {
-      var registerNewButton = document.getElementById('register-new');
-      var workOrderNewButton = document.getElementById('workorder-new');
-      var workOrderDashboardButton = document.getElementById('workorder-new-dashboard');
       document.getElementById('user-name').textContent = user.nama || 'User';
       document.getElementById('user-role').textContent = user.role || '';
       document.getElementById('welcome-name').textContent = user.nama || 'User';
@@ -108,9 +105,6 @@
       document.getElementById('menu-toggle').addEventListener('click', function () {
         document.getElementById('sidebar').classList.toggle('open');
       });
-      if (registerNewButton) registerNewButton.addEventListener('click', function (event) { event.stopPropagation(); editRegister({}); });
-      if (workOrderNewButton) workOrderNewButton.addEventListener('click', function (event) { event.stopPropagation(); editWorkOrder(); });
-      if (workOrderDashboardButton) workOrderDashboardButton.addEventListener('click', function (event) { event.stopPropagation(); openView('workorder'); editWorkOrder(); });
       document.addEventListener('click', dashboardClick);
       document.addEventListener('input', dashboardInput);
       document.addEventListener('change', dashboardInput);
@@ -131,8 +125,6 @@
       if (customerCloseTarget) { closeCustomerFormTab(); return; }
       var vehicleCloseTarget = event.target.closest('[data-vehicle-close-form]');
       if (vehicleCloseTarget) { closeVehicleFormTab(); return; }
-      var registerCloseTarget = event.target.closest('[data-register-close-form]');
-      if (registerCloseTarget) { closeRegisterFormTab(); return; }
       var invoiceCloseTarget = event.target.closest('[data-invoice-close-form]');
       if (invoiceCloseTarget) { closeInvoiceFormTab(); return; }
       var closeTarget = event.target.closest('[data-wo-close-form]');
@@ -145,8 +137,6 @@
       if (target.hasAttribute('data-cancel') && target.closest('#customers-view')) { closeCustomerFormTab(); return; }
       if (target.hasAttribute('data-vehicle-tab')) { showVehicleTab(target.getAttribute('data-vehicle-tab')); return; }
       if (target.hasAttribute('data-cancel') && target.closest('#vehicles-view')) { closeVehicleFormTab(); return; }
-      if (target.hasAttribute('data-register-tab')) { showRegisterTab(target.getAttribute('data-register-tab')); return; }
-      if (target.hasAttribute('data-cancel') && target.closest('#register-view')) { closeRegisterFormTab(); return; }
       if (target.hasAttribute('data-invoice-tab')) { showInvoiceTab(target.getAttribute('data-invoice-tab')); return; }
       if (target.hasAttribute('data-cancel') && target.closest('#invoice-view')) { closeInvoiceFormTab(); return; }
       if (target.hasAttribute('data-item-tab')) { showItemTab(target.getAttribute('data-item-tab')); return; }
@@ -158,10 +148,6 @@
       if (target.id === 'customer-refresh') { loadCustomers(); return; }
       if (target.id === 'vehicle-new') { editVehicle({}); return; }
       if (target.id === 'vehicle-refresh') { loadVehicles(); return; }
-      if (target.id === 'register-new') { editRegister({}); return; }
-      if (target.id === 'register-refresh') { loadRegisters(); return; }
-      if (target.hasAttribute('data-register-new-customer')) { createRegisterCustomer(); return; }
-      if (target.hasAttribute('data-register-new-vehicle')) { createRegisterVehicle(); return; }
       if (target.id === 'workorder-new-dashboard') { openView('workorder'); editWorkOrder(); return; }
       if (target.id === 'workorder-new') { editWorkOrder(); return; }
       if (target.id === 'wofast-save') { saveFastWorkOrder(); return; }
@@ -187,9 +173,6 @@
       if (target.hasAttribute('data-customer')) { google.script.run.withSuccessHandler(editCustomer).withFailureHandler(failure).customerGet(target.getAttribute('data-customer')); return; }
       if (target.hasAttribute('data-vehicle-delete')) { deleteVehicle(target.getAttribute('data-vehicle-delete')); return; }
       if (target.hasAttribute('data-vehicle')) { google.script.run.withSuccessHandler(editVehicle).withFailureHandler(failure).vehicleGet(target.getAttribute('data-vehicle')); return; }
-      if (target.hasAttribute('data-register-edit')) { google.script.run.withSuccessHandler(editRegister).withFailureHandler(failure).registerGet(target.getAttribute('data-register-edit')); return; }
-      if (target.hasAttribute('data-register-proceed')) { proceedRegister(target.getAttribute('data-register-proceed')); return; }
-      if (target.hasAttribute('data-register-delete')) { deleteRegister(target.getAttribute('data-register-delete')); return; }
       if (target.hasAttribute('data-workorder')) { google.script.run.withSuccessHandler(editWorkOrder).withFailureHandler(failure).workOrderGet(target.getAttribute('data-workorder')); return; }
       if (target.hasAttribute('data-wo-new-customer')) { createCustomerFromWorkOrder(); return; }
       if (target.hasAttribute('data-wofast-new-customer')) { createFastCustomer(); return; }
@@ -215,8 +198,6 @@
       if (event.target.id === 'customer-nonactive-filter' || event.target.id === 'customer-category-filter') loadCustomers();
       if (event.target.id === 'vehicle-search') loadVehicles();
       if (event.target.id === 'vehicle-customer-filter' || event.target.id === 'vehicle-brand-filter') loadVehicles();
-      if (event.target.id === 'register-search' || event.target.id === 'register-status-filter') loadRegisters();
-      if (event.target.hasAttribute && event.target.hasAttribute('data-register-price')) event.target.value = formatThousands(event.target.value);
       if (event.target.id === 'workorder-active-search' || event.target.id === 'workorder-active-status') loadWorkOrders('active');
       if (event.target.id === 'workorder-search' || event.target.id === 'workorder-status' || event.target.id === 'workorder-customer-filter') loadWorkOrders('list');
       if (event.target.hasAttribute && event.target.hasAttribute('data-fast-price')) event.target.value = formatThousands(event.target.value);
@@ -352,12 +333,11 @@
     function openView(view) {
       Array.prototype.forEach.call(document.querySelectorAll('.view'), function (el) { el.hidden = el.id !== view + '-view'; });
       Array.prototype.forEach.call(document.querySelectorAll('.nav-item[data-view]'), function (el) { el.classList.toggle('active', el.getAttribute('data-view') === view); });
-      document.getElementById('page-title').textContent = ({ dashboard:'Dashboard', customers:'Pelanggan', vehicles:'Kendaraan', register:'Register', workorder:'Work Order', wofast:'WO Cepat', invoice:'Invoice', payment:'Pembayaran', items:'Stok Barang', stock:'Stok', suppliers:'Supplier', purchase:'Pembelian', ai:'Chat AI' })[view] || 'DACM ERP';
+      document.getElementById('page-title').textContent = ({ dashboard:'Dashboard', customers:'Pelanggan', vehicles:'Kendaraan', workorder:'Work Order', wofast:'WO Cepat', invoice:'Invoice', payment:'Pembayaran', items:'Stok Barang', stock:'Stok', suppliers:'Supplier', purchase:'Pembelian', ai:'Chat AI' })[view] || 'DACM ERP';
       document.getElementById('sidebar').classList.remove('open');
       if (view === 'customers') loadCustomers();
       if (view === 'vehicles') { populateVehicleFilters(); loadVehicles(); }
-      if (view === 'register') loadRegisters();
-      if (view === 'workorder') { resetWorkOrderListFilters(); populateWorkOrderCustomerFilter(true); loadWorkOrders('list'); }
+      if (view === 'workorder') { populateWorkOrderCustomerFilter(); loadWorkOrders('list'); }
       if (view === 'wofast') renderFastWorkOrder();
       if (view === 'invoice') loadInvoices();
       if (view === 'payment') loadPayments();
@@ -539,356 +519,6 @@
       }).withFailureHandler(failure).vehicleList('');
     }
 
-    var registerLookupPayload = null;
-
-    function showRegisterTab(tabName) {
-      var listPanel = document.getElementById('register-list-panel');
-      var formPanel = document.getElementById('register-form-wrap');
-      var formTab = document.getElementById('register-form-tab');
-      if (!listPanel || !formPanel) return;
-      var showForm = tabName === 'form' && formTab && !formTab.hidden;
-      listPanel.hidden = showForm;
-      formPanel.hidden = !showForm;
-      Array.prototype.forEach.call(document.querySelectorAll('[data-register-tabs] .module-tab'), function (tab) {
-        tab.classList.toggle('active', (tab.getAttribute('data-register-tab') === 'form') === showForm);
-      });
-    }
-
-    function openRegisterFormTab(record) {
-      var formTab = document.getElementById('register-form-tab');
-      if (formTab) {
-        formTab.innerHTML = escapeHtml(record && record.RegisterNo ? 'Edit ' + record.RegisterNo : 'Data Baru') + ' <span data-register-close-form>×</span>';
-        formTab.hidden = false;
-      }
-      showRegisterTab('form');
-    }
-
-    function closeRegisterFormTab() {
-      var formTab = document.getElementById('register-form-tab');
-      var formPanel = document.getElementById('register-form-wrap');
-      if (formTab) formTab.hidden = true;
-      if (formPanel) formPanel.innerHTML = '';
-      showRegisterTab('list');
-    }
-
-    function registerBranchOptions(selected) {
-      var branch = String(selected || 'D').toUpperCase();
-      return [
-        { value: 'D', label: 'PERINTIS' },
-        { value: 'C', label: 'CAKALANG' },
-        { value: 'M', label: 'MAMUJU' }
-      ].map(function (item) {
-        return '<option value="' + item.value + '"' + (branch === item.value ? ' selected' : '') + '>' + item.label + '</option>';
-      }).join('');
-    }
-
-    function registerCustomerLabel(customer) {
-      return String(customer.CustomerName || '') + ' - ' + String(customer.Phone || customer.WhatsApp || '-');
-    }
-
-    function registerVehicleLabel(vehicle) {
-      return String(vehicle.PlateNumber || '') + ' - ' + String(vehicle.Brand || '') + ' ' + String(vehicle.Model || '');
-    }
-
-    function renderRegisterLookupLists(payload, record) {
-      var customerList = uniqueLookupOptions((payload.customers || []).map(function (customer) {
-        return { id: customer.CustomerID, label: registerCustomerLabel(customer) };
-      }));
-      var vehicleList = uniqueLookupOptions((payload.vehicles || []).map(function (vehicle) {
-        return { id: vehicle.VehicleID, customerId: vehicle.CustomerID, label: registerVehicleLabel(vehicle) };
-      }));
-      var selectedCustomer = customerList.filter(function (customer) { return customer.id === (record && record.CustomerID); })[0];
-      var selectedVehicle = vehicleList.filter(function (vehicle) { return vehicle.id === (record && record.VehicleID); })[0];
-      var customerOptions = customerList.map(function (customer) { return '<option value="' + escapeHtml(customer.label) + '"></option>'; }).join('');
-      var vehicleOptions = vehicleList.filter(function (vehicle) { return !record || !record.CustomerID || vehicle.customerId === record.CustomerID; }).map(function (vehicle) { return '<option value="' + escapeHtml(vehicle.label) + '"></option>'; }).join('');
-      return {
-        customerList: customerList,
-        vehicleList: vehicleList,
-        selectedCustomer: selectedCustomer,
-        selectedVehicle: selectedVehicle,
-        customerOptions: customerOptions,
-        vehicleOptions: vehicleOptions
-      };
-    }
-
-    function editRegister(record) {
-      record = record || {};
-      var wrap = document.getElementById('register-form-wrap');
-      var branch = String(record.Branch || 'D').toUpperCase().charAt(0) || 'D';
-      var estimatedTotal = Number(record.EstimatedTotal || 0) ? formatThousands(record.EstimatedTotal) : '';
-      openRegisterFormTab(record);
-      if (!wrap) return;
-      wrap.innerHTML = '<div class="record-form wo-form register-form register-loading"><div class="wide"><strong>Memuat data register...</strong><p class="muted">Menyiapkan pilihan customer, kendaraan, dan template form.</p></div></div>';
-      google.script.run.withSuccessHandler(function (payload) {
-        registerLookupPayload = payload;
-        var lookups = renderRegisterLookupLists(payload, record);
-        wrap.innerHTML =
-          '<form id="register-form" class="record-form wo-form register-form">' +
-            '<input type="hidden" name="RegisterNo" value="' + escapeHtml(record.RegisterNo || '') + '">' +
-            '<input type="hidden" id="register-customer-id" name="CustomerID" value="' + escapeHtml(record.CustomerID || '') + '">' +
-            '<input type="hidden" id="register-vehicle-id" name="VehicleID" value="' + escapeHtml(record.VehicleID || '') + '">' +
-            '<input type="hidden" name="Status" value="' + escapeHtml(record.Status || 'REGISTERED') + '">' +
-            '<datalist id="register-customer-list">' + lookups.customerOptions + '</datalist>' +
-            '<datalist id="register-vehicle-list">' + lookups.vehicleOptions + '</datalist>' +
-            '<div class="wo-form-header wide">' +
-              '<div><span class="wo-form-no">No: ' + escapeHtml(record.RegisterNo || 'OTOMATIS') + '</span><strong>Data Register</strong></div>' +
-              '<label>Cabang <select name="Branch" required>' + registerBranchOptions(branch) + '</select></label>' +
-              '<label>Tanggal <input class="wo-form-date" name="RegisterDate" type="date" value="' + escapeHtml(dateInputValue(record.RegisterDate || todayValue())) + '"></label>' +
-            '</div>' +
-            '<div class="form-section-title wide">Customer</div>' +
-            '<div class="wide lookup-row"><label>Cari customer / no. telepon</label><div class="lookup-field"><input id="register-customer-search" list="register-customer-list" value="' + escapeHtml(lookups.selectedCustomer ? lookups.selectedCustomer.label : '') + '" placeholder="Ketik nama atau nomor telepon customer"><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-register-new-customer>+</button></div></div>' +
-            '<div class="form-section-title wide">Kendaraan</div>' +
-            '<div class="wide lookup-row"><label>Cari kendaraan / no. polisi</label><div class="lookup-field"><input id="register-vehicle-search" list="register-vehicle-list" value="' + escapeHtml(lookups.selectedVehicle ? lookups.selectedVehicle.label : '') + '" placeholder="Ketik no polisi atau tipe mobil"><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-register-new-vehicle>+</button></div></div>' +
-            '<div id="register-inline-master-wrap" class="wide"></div>' +
-            '<div class="form-section-title wide">Keluhan</div>' +
-            '<div class="wide"><input name="Complaint" required value="' + escapeHtml(record.Complaint || '') + '" placeholder="Keluhan customer"></div>' +
-            '<div class="form-section-title wide">Pengecekan &amp; Estimasi</div>' +
-            '<div class="register-summary-row wide">' +
-              '<div><label>Rekomendasi awal</label><input name="Recommendation" value="' + escapeHtml(record.Recommendation || '') + '" placeholder="Opsional"></div>' +
-              '<div><label>Estimasi harga</label><input class="money-input" data-register-price inputmode="numeric" name="EstimatedTotal" value="' + escapeHtml(estimatedTotal) + '" placeholder="0"></div>' +
-            '</div>' +
-            '<div class="wide"><input name="Notes" value="' + escapeHtml(record.Notes || '') + '" placeholder="Catatan / keterangan"></div>' +
-            '<div class="actions">' +
-              '<button type="button" class="button primary" id="register-proceed">LANJUT WO</button>' +
-              '<button type="button" class="button secondary" id="register-pending">PENDING</button>' +
-              '<button type="button" class="button secondary" data-cancel>Batalkan</button>' +
-            '</div>' +
-          '</form>';
-        registerLookupPayload = payload;
-        bindRegisterLookup(payload);
-        document.getElementById('register-form').addEventListener('input', function (event) {
-          if (event.target && event.target.hasAttribute && event.target.hasAttribute('data-register-price')) {
-            event.target.value = formatThousands(event.target.value);
-          }
-        });
-        document.getElementById('register-pending').addEventListener('click', function () {
-          submitRegisterForm('PENDING');
-        });
-        document.getElementById('register-proceed').addEventListener('click', function () {
-          submitRegisterForm('WO_CREATED');
-        });
-      }).withFailureHandler(function (error) {
-        if (wrap) {
-          wrap.innerHTML = '<div class="record-form wo-form register-form register-loading"><div class="wide"><strong>Form Register siap dibuka</strong><p class="muted">' + escapeHtml((error && error.message) || error || 'Gagal memuat daftar customer dan kendaraan.') + '</p></div></div>';
-        }
-        failure(error);
-      }).registerFormOptions();
-    }
-
-    function bindRegisterLookup(payload) {
-      var customerInput = document.getElementById('register-customer-search');
-      var vehicleInput = document.getElementById('register-vehicle-search');
-      if (!customerInput || !vehicleInput) return;
-      customerInput.addEventListener('input', function () {
-        applyRegisterCustomerLookup(payload);
-        refreshRegisterVehicleDatalist(payload);
-        applyRegisterVehicleLookup(payload);
-      });
-      vehicleInput.addEventListener('input', function () {
-        applyRegisterVehicleLookup(payload);
-      });
-      applyRegisterCustomerLookup(payload);
-      refreshRegisterVehicleDatalist(payload);
-      applyRegisterVehicleLookup(payload);
-    }
-
-    function refreshRegisterVehicleDatalist(payload) {
-      var customerId = document.getElementById('register-customer-id').value;
-      var list = document.getElementById('register-vehicle-list');
-      var vehicles = payload.vehicles.filter(function (vehicle) {
-        return !customerId || String(vehicle.CustomerID) === String(customerId);
-      });
-      list.innerHTML = vehicles.map(function (vehicle) {
-        return '<option value="' + escapeHtml(registerVehicleLabel(vehicle)) + '"></option>';
-      }).join('');
-      if (document.getElementById('register-vehicle-id')) {
-        document.getElementById('register-vehicle-id').value = '';
-      }
-    }
-
-    function applyRegisterCustomerLookup(payload) {
-      var input = document.getElementById('register-customer-search');
-      var hidden = document.getElementById('register-customer-id');
-      if (!input || !hidden) return;
-      var value = String(input.value || '').trim().toLowerCase();
-      var found = (payload.customers || []).filter(function (customer) {
-        return registerCustomerLabel(customer).trim().toLowerCase() === value;
-      })[0];
-      hidden.value = found ? found.CustomerID : '';
-    }
-
-    function applyRegisterVehicleLookup(payload) {
-      var customerId = document.getElementById('register-customer-id').value;
-      var input = document.getElementById('register-vehicle-search');
-      var hidden = document.getElementById('register-vehicle-id');
-      if (!input || !hidden) return;
-      var value = String(input.value || '').trim().toLowerCase();
-      var found = (payload.vehicles || []).filter(function (vehicle) {
-        var sameCustomer = !customerId || String(vehicle.CustomerID) === String(customerId);
-        return sameCustomer && registerVehicleLabel(vehicle).trim().toLowerCase() === value;
-      })[0];
-      hidden.value = found ? found.VehicleID : '';
-    }
-
-    function createRegisterCustomer() {
-      if (!registerLookupPayload) return;
-      var box = document.getElementById('register-inline-master-wrap');
-      if (!box) return;
-      box.innerHTML = '<div class="inline-master-form"><strong>Customer Baru</strong><div class="inline-grid"><div><label>Nama customer</label><input id="register-new-customer-name" placeholder="Contoh: RIOZ"></div><div><label>No. telepon</label><input id="register-new-customer-phone" placeholder="Contoh: 8512345678"></div><div class="wide"><label>Alamat</label><input id="register-new-customer-address" placeholder="Opsional"></div></div><div class="actions inline-actions inline-actions-split"><button type="button" class="button primary" id="register-save-new-customer">Simpan Customer</button><button type="button" class="button secondary" id="register-cancel-new-customer">Batal</button></div></div>';
-      document.getElementById('register-new-customer-name').focus();
-      document.getElementById('register-cancel-new-customer').addEventListener('click', function () { box.innerHTML = ''; });
-      document.getElementById('register-save-new-customer').addEventListener('click', function () {
-        var name = (document.getElementById('register-new-customer-name').value || '').trim();
-        var phone = (document.getElementById('register-new-customer-phone').value || '').trim();
-        var address = (document.getElementById('register-new-customer-address').value || '').trim();
-        if (!name || !phone) { alert('Nama customer dan no. telepon wajib diisi.'); return; }
-        var button = document.getElementById('register-save-new-customer');
-        button.disabled = true;
-        button.textContent = 'Menyimpan...';
-        google.script.run.withSuccessHandler(function (customer) {
-          if (!customer || !customer.CustomerID) { failure('Data customer yang dikembalikan server tidak lengkap.'); return; }
-          registerLookupPayload.customers.push(customer);
-          var label = registerCustomerLabel(customer);
-          document.getElementById('register-customer-search').value = label;
-          document.getElementById('register-customer-id').value = customer.CustomerID;
-          refreshRegisterVehicleDatalist(registerLookupPayload);
-          document.getElementById('register-vehicle-search').value = '';
-          document.getElementById('register-vehicle-id').value = '';
-          box.innerHTML = '';
-        }).withFailureHandler(function (error) {
-          button.disabled = false;
-          button.textContent = 'Simpan Customer';
-          failure(error);
-        }).customerSave({ CustomerName: name, Phone: phone, WhatsApp: phone, Address: address });
-      });
-    }
-
-    function createRegisterVehicle() {
-      if (!registerLookupPayload) return;
-      applyRegisterCustomerLookup(registerLookupPayload);
-      var customerId = document.getElementById('register-customer-id').value;
-      if (!customerId) { alert('Pilih customer dulu sebelum membuat kendaraan baru.'); return; }
-      var box = document.getElementById('register-inline-master-wrap');
-      if (!box) return;
-      box.innerHTML = '<div class="inline-master-form"><strong>Kendaraan Baru</strong><div class="inline-grid"><div><label>No. polisi</label><input id="register-new-vehicle-plate" placeholder="Contoh: DD 1385 V"></div><div><label>Merek</label><input id="register-new-vehicle-brand" placeholder="Contoh: Toyota"></div><div><label>Model / tipe</label><input id="register-new-vehicle-model" placeholder="Contoh: Ayla"></div><div><label>KM terakhir</label><input id="register-new-vehicle-km" type="number" min="0" placeholder="Opsional"></div></div><div class="actions inline-actions inline-actions-split"><button type="button" class="button primary" id="register-save-new-vehicle">Simpan Kendaraan</button><button type="button" class="button secondary" id="register-cancel-new-vehicle">Batal</button></div></div>';
-      document.getElementById('register-new-vehicle-plate').focus();
-      document.getElementById('register-cancel-new-vehicle').addEventListener('click', function () { box.innerHTML = ''; });
-      document.getElementById('register-save-new-vehicle').addEventListener('click', function () {
-        var plate = (document.getElementById('register-new-vehicle-plate').value || '').trim().toUpperCase();
-        var brand = (document.getElementById('register-new-vehicle-brand').value || '').trim();
-        var model = (document.getElementById('register-new-vehicle-model').value || '').trim();
-        var km = (document.getElementById('register-new-vehicle-km').value || '').trim();
-        if (!plate || !brand) { alert('No. polisi dan merek kendaraan wajib diisi.'); return; }
-        var existing = (registerLookupPayload.vehicles || []).filter(function (vehicle) {
-          return String(vehicle.PlateNumber || '').toUpperCase().replace(/\s+/g, ' ').trim() === plate.replace(/\s+/g, ' ').trim();
-        })[0];
-        if (existing) {
-          document.getElementById('register-vehicle-search').value = registerVehicleLabel(existing);
-          document.getElementById('register-vehicle-id').value = existing.VehicleID;
-          box.innerHTML = '';
-          alert('Nomor polisi sudah ada. Kendaraan existing telah dipilih.');
-          return;
-        }
-        var button = document.getElementById('register-save-new-vehicle');
-        button.disabled = true;
-        button.textContent = 'Menyimpan...';
-        google.script.run.withSuccessHandler(function (vehicle) {
-          if (!vehicle || !vehicle.VehicleID) { failure('Data kendaraan yang dikembalikan server tidak lengkap.'); return; }
-          registerLookupPayload.vehicles.push(vehicle);
-          document.getElementById('register-vehicle-search').value = registerVehicleLabel(vehicle);
-          document.getElementById('register-vehicle-id').value = vehicle.VehicleID;
-          box.innerHTML = '';
-        }).withFailureHandler(function (error) {
-          button.disabled = false;
-          button.textContent = 'Simpan Kendaraan';
-          failure(error);
-        }).vehicleSave({ CustomerID: customerId, PlateNumber: plate, Brand: brand, Model: model, LastKM: km || 0 });
-      });
-    }
-
-    function submitRegisterForm(status) {
-      var form = document.getElementById('register-form');
-      if (!form || !registerLookupPayload) return;
-      applyRegisterCustomerLookup(registerLookupPayload);
-      applyRegisterVehicleLookup(registerLookupPayload);
-      if (!document.getElementById('register-customer-id').value) { alert('Pilih customer dari daftar atau klik + Customer Baru.'); return; }
-      if (!document.getElementById('register-vehicle-id').value) { alert('Pilih kendaraan dari daftar atau klik + Kendaraan Baru.'); return; }
-      form.querySelector('[name="Status"]').value = status;
-      var payload = formData(form);
-      var buttonId = status === 'WO_CREATED' ? 'register-proceed' : 'register-pending';
-      var button = document.getElementById(buttonId);
-      if (button) { button.disabled = true; button.textContent = status === 'WO_CREATED' ? 'Membuat WO...' : 'Menyimpan...'; }
-      var runner = google.script.run.withSuccessHandler(function (result) {
-        if (button) {
-          button.disabled = false;
-          button.textContent = status === 'WO_CREATED' ? 'LANJUT WO' : 'PENDING';
-        }
-        if (status === 'WO_CREATED' && result && result.existingActive && result.workOrder && result.workOrder.WorkOrderNo) {
-          alert('Kendaraan ini sudah memiliki WO aktif. Sistem akan membuka WO ' + result.workOrder.WorkOrderNo + '.');
-        }
-        closeRegisterFormTab();
-        loadRegisters();
-        loadDashboard();
-        if (status === 'WO_CREATED') {
-          var workOrder = result && result.workOrder;
-          openView('workorder');
-          if (workOrder && workOrder.WorkOrderNo) {
-            google.script.run.withSuccessHandler(function (record) {
-              editWorkOrder(record || workOrder);
-            }).withFailureHandler(failure).workOrderGet(workOrder.WorkOrderNo);
-          }
-        }
-      }).withFailureHandler(function (error) {
-        if (button) {
-          button.disabled = false;
-          button.textContent = status === 'WO_CREATED' ? 'LANJUT WO' : 'PENDING';
-        }
-        failure(error);
-      });
-      if (status === 'WO_CREATED') runner.registerProceed(payload);
-      else runner.registerPending(payload);
-    }
-
-    function loadRegisters() {
-      var filter = {
-        search: (document.getElementById('register-search') || {}).value || '',
-        status: (document.getElementById('register-status-filter') || {}).value || 'ALL'
-      };
-      google.script.run.withSuccessHandler(function (rows) {
-        document.getElementById('register-count').textContent = rows.length + ' register';
-        document.getElementById('register-table').innerHTML = rows.length ? rows.map(function (row) {
-          var actions = '<button class="row-action" title="Lanjut" aria-label="Lanjut" data-register-proceed="' + escapeHtml(row.RegisterNo) + '">Lanjut</button> <button class="row-action row-action-icon" title="Edit" aria-label="Edit" data-register-edit="' + escapeHtml(row.RegisterNo) + '">&#9998;</button> <button class="row-action row-action-icon row-action-danger" title="Hapus" aria-label="Hapus" data-register-delete="' + escapeHtml(row.RegisterNo) + '">&#128465;</button>';
-          return '<tr><td data-label="No. Register">' + escapeHtml(row.RegisterNo) + '</td><td data-label="Tanggal">' + escapeHtml(row.RegisterDateText || '') + '</td><td data-label="Cabang">' + escapeHtml(row.BranchLabel || row.Branch || '') + '</td><td data-label="Customer">' + escapeHtml(row.CustomerName) + '<br><span class="muted">' + escapeHtml(row.CustomerPhone || '') + '</span></td><td data-label="Kendaraan">' + escapeHtml(row.PlateNumber) + '<br><span class="muted">' + escapeHtml(row.VehicleLabel || '') + '</span></td><td data-label="Keluhan">' + escapeHtml(row.Complaint) + '</td><td data-label="Estimasi">' + escapeHtml(row.EstimatedText || rupiah(0)) + '</td><td data-label="Status"><span class="status">' + escapeHtml(row.StatusLabel || row.Status || '') + '</span></td><td data-label="Aksi">' + actions + '</td></tr>';
-        }).join('') : '<tr><td colspan="9" class="muted">Belum ada register.</td></tr>';
-      }).withFailureHandler(failure).registerList(filter);
-    }
-
-    function deleteRegister(registerNo) {
-      if (!confirm('Hapus register ' + registerNo + ' secara permanen?')) return;
-      google.script.run.withSuccessHandler(function () {
-        loadRegisters();
-        loadDashboard();
-      }).withFailureHandler(failure).registerDelete(registerNo);
-    }
-
-    function proceedRegister(registerNo) {
-      if (!confirm('Lanjutkan register ini menjadi Work Order?')) return;
-      google.script.run.withSuccessHandler(function (result) {
-        if (result && result.existingActive && result.workOrder && result.workOrder.WorkOrderNo) {
-          alert('Kendaraan ini sudah memiliki WO aktif. Sistem akan membuka WO ' + result.workOrder.WorkOrderNo + '.');
-        }
-        loadRegisters();
-        loadDashboard();
-        openView('workorder');
-        var workOrder = result && result.workOrder;
-        if (workOrder && workOrder.WorkOrderNo) {
-          google.script.run.withSuccessHandler(function (record) {
-            editWorkOrder(record || workOrder);
-          }).withFailureHandler(failure).workOrderGet(workOrder.WorkOrderNo);
-        }
-      }).withFailureHandler(failure).registerProceed(registerNo);
-    }
-
     function currentWorkOrderWrap() {
       if (currentWorkOrderMode() === 'active') return document.getElementById('workorder-active-form-wrap');
       return document.getElementById('workorder-form-wrap');
@@ -944,26 +574,6 @@
 
     function refreshWorkOrderViews() {
       if (document.getElementById('workorder-table')) loadWorkOrders('list');
-    }
-
-    function resetWorkOrderListFilters() {
-      var search = document.getElementById('workorder-search');
-      var customer = document.getElementById('workorder-customer-filter');
-      var status = document.getElementById('workorder-status');
-      if (search) search.value = '';
-      if (customer) customer.value = '';
-      if (status) status.value = 'ALL';
-      var modeEl = document.getElementById('workorder-date-mode');
-      var fromEl = document.getElementById('workorder-date-from');
-      var toEl = document.getElementById('workorder-date-to');
-      var durationEl = document.getElementById('workorder-date-duration');
-      var unitEl = document.getElementById('workorder-date-unit');
-      if (modeEl) modeEl.value = 'ALL';
-      if (fromEl) fromEl.value = '';
-      if (toEl) toEl.value = '';
-      if (durationEl) durationEl.value = '';
-      if (unitEl) unitEl.value = 'MONTH';
-      updateWorkOrderDateFilterButton();
     }
 
     function populateWorkOrderCustomerFilter(force) {
@@ -1069,7 +679,8 @@
         { group: 'Sparepart', name: 'Filter Drier' },
         { group: 'Sparepart', name: 'Evaporator' },
         { group: 'Sparepart', name: 'Condensor' },
-        { group: 'Sparepart', name: 'Motor Fan' }
+        { group: 'Sparepart', name: 'Motor Fan' },
+        { group: 'Lainnya', name: 'Lainnya' }
       ];
     }
 
@@ -1087,10 +698,11 @@
         var vehicleOptions = uniqueLookupOptions((fastWorkOrderPayload.vehicles || []).map(function (v) {
           return { id: v.VehicleID, label: vehicleLookupLabel(v) };
         })).map(function (item) { return '<option value="' + escapeHtml(item.label) + '"></option>'; }).join('');
-        var checklist = ['Jasa', 'Sparepart'].map(function (groupName) {
+        var checklist = ['Jasa', 'Sparepart', 'Lainnya'].map(function (groupName) {
           var lines = fastWorkOrderItems().filter(function (item) { return item.group === groupName; }).map(function (item, index) {
             var id = 'wofast-item-' + groupName.toLowerCase() + '-' + index;
-            return '<div class="wofast-line" data-fast-line><label class="wofast-check"><input type="checkbox" id="' + id + '" data-fast-check data-fast-name="' + escapeHtml(item.name) + '" data-fast-group="' + escapeHtml(item.group) + '"><span>' + escapeHtml(item.name) + '</span></label><input class="wofast-price" data-fast-price type="text" inputmode="numeric" autocomplete="off" placeholder="Harga" disabled></div>';
+            var groupClass = item.group === 'Lainnya' ? ' wofast-custom-line' : '';
+            return '<div class="wofast-line' + groupClass + '" data-fast-line><label class="wofast-check"><input type="checkbox" id="' + id + '" data-fast-check data-fast-name="' + escapeHtml(item.name) + '" data-fast-group="' + escapeHtml(item.group) + '"><span>' + escapeHtml(item.name) + '</span></label><input class="wofast-price" data-fast-price type="text" inputmode="numeric" autocomplete="off" placeholder="Harga" disabled></div>';
           }).join('');
           return '<div class="wofast-group"><div class="wofast-group-title">' + escapeHtml(groupName) + '</div>' + lines + '</div>';
         }).join('');
@@ -1219,7 +831,6 @@
       if (!form) return;
       var total = 0;
       var lines = [];
-      var detailLines = [];
       Array.prototype.forEach.call(form.querySelectorAll('[data-fast-line]'), function (line) {
         var check = line.querySelector('[data-fast-check]');
         var price = line.querySelector('[data-fast-price]');
@@ -1231,18 +842,9 @@
         }
         if (!checked) return;
         var name = check.getAttribute('data-fast-name') || '';
-        var group = check.getAttribute('data-fast-group') || 'Lainnya';
         var amount = Number(price ? cleanNumber(price.value) : 0) || 0;
         total += amount;
         lines.push(name + (amount ? ' - ' + rupiah(amount) : ''));
-        detailLines.push({
-          GroupName: group,
-          ItemName: name,
-          Qty: 1,
-          Price: amount,
-          Subtotal: amount,
-          Source: 'QUICK'
-        });
       });
       var totalRaw = document.getElementById('wofast-total-raw');
       var totalText = document.getElementById('wofast-total');
@@ -1250,7 +852,6 @@
       if (totalRaw) totalRaw.value = total;
       if (totalText) totalText.textContent = rupiah(total);
       if (recommendation) recommendation.value = lines.join('; ');
-      form.setAttribute('data-fast-lines', JSON.stringify(detailLines));
     }
 
     function saveFastWorkOrder() {
@@ -1261,8 +862,6 @@
       if (!document.getElementById('wofast-customer-id').value) { alert('Pilih customer existing dari dropdown dulu.'); return; }
       if (!document.getElementById('wofast-vehicle-id').value) { alert('Pilih kendaraan existing dari dropdown dulu.'); return; }
       if (!document.getElementById('wofast-recommendation').value) { alert('Centang minimal satu pekerjaan.'); return; }
-      var payload = formData(form);
-      payload.WorkItemLines = form.getAttribute('data-fast-lines') || '[]';
       var button = document.getElementById('wofast-save');
       if (button) { button.disabled = true; button.textContent = 'Menyimpan…'; }
       google.script.run.withSuccessHandler(function () {
@@ -1274,25 +873,13 @@
       }).withFailureHandler(function (error) {
         if (button) { button.disabled = false; button.textContent = 'Simpan ke WO'; }
         failure(error);
-      }).workOrderSave(payload);
+      }).workOrderSave(formData(form));
     }
 
     var workOrderLookupPayload = null;
 
     function editWorkOrder(record) {
       record = record || {};
-      if (record.WorkOrderNo && (record.Status === 'DONE' || record.Status === 'PAID')) {
-        editInvoice(record.WorkOrderNo);
-        return;
-      }
-      var wrap = currentWorkOrderWrap();
-      if (wrap) {
-        wrap.hidden = false;
-        wrap.innerHTML = '<div class="record-form wo-form"><div class="wide"><strong>Memuat data Work Order...</strong><p class="muted">Menyiapkan customer, kendaraan, dan detail WO.</p></div></div>';
-        var mode = currentWorkOrderMode();
-        showWorkOrderTab(mode, 'form');
-        openWorkOrderFormTab(record);
-      }
       google.script.run.withSuccessHandler(function (payload) {
         workOrderLookupPayload = payload;
         var customerList = uniqueLookupOptions(payload.customers.map(function (c) {
@@ -1306,37 +893,19 @@
         var customerOptions = customerList.map(function (c) { return '<option value="' + escapeHtml(c.label) + '"></option>'; }).join('');
         var vehicleOptions = vehicleList.filter(function (v) { return !record.CustomerID || v.customerId === record.CustomerID; }).map(function (v) { return '<option value="' + escapeHtml(v.label) + '"></option>'; }).join('');
         var wrap = currentWorkOrderWrap();
-        var branch = String(record.Branch || 'D').toUpperCase().charAt(0) || 'D';
+        var branch = String(record.Branch || APP.DEFAULT_BRANCH || 'D').toUpperCase().charAt(0) || 'D';
         var estimatedTotal = Number(record.EstimatedTotal || 0) ? formatThousands(record.EstimatedTotal) : '';
-        var stage = record.WorkOrderNo ? (record.Status || 'PENDING') : 'NEW';
-        var isStageTwo = stage === 'IN_PROGRESS';
-        var actionButtons = '';
-        if (isStageTwo) {
-          actionButtons = '<button type="button" class="button primary" id="workorder-go-payment">Pembayaran</button><button type="button" class="button secondary" id="workorder-back-pending">Batal</button>';
-        } else {
-          actionButtons = '<button type="button" class="button primary" id="workorder-checkin">Check In</button><button type="button" class="button secondary" id="workorder-save-pending">Pending</button><button type="button" class="button secondary" data-cancel>Batal</button>';
-        }
-        wrap.innerHTML = '<form id="workorder-form" class="record-form wo-form"><input type="hidden" name="WorkOrderNo" value="' + escapeHtml(record.WorkOrderNo || '') + '"><input type="hidden" id="workorder-customer-id" name="CustomerID" value="' + escapeHtml(record.CustomerID || '') + '"><input type="hidden" id="workorder-vehicle-id" name="VehicleID" value="' + escapeHtml(record.VehicleID || '') + '"><input type="hidden" name="ApprovalStatus" value="' + escapeHtml(record.ApprovalStatus || 'PENDING') + '"><datalist id="workorder-customer-list">' + customerOptions + '</datalist><datalist id="workorder-vehicle-list">' + vehicleOptions + '</datalist><div class="wo-form-header wide"><div><span class="wo-form-no">No: ' + escapeHtml(record.WorkOrderNo || 'OTOMATIS') + '</span><strong>Data Work Order</strong></div><label>Cabang <select name="Branch" required><option value="D"' + (branch === 'D' ? ' selected' : '') + '>PERINTIS</option><option value="C"' + (branch === 'C' ? ' selected' : '') + '>CAKALANG</option><option value="M"' + (branch === 'M' ? ' selected' : '') + '>MAMUJU</option></select></label><label>Pickup Date <input class="wo-form-date" name="StartDate" type="date" value="' + escapeHtml(dateInputValue(record.StartDate || todayValue())) + '"></label></div><div class="form-section-title wide">Customer</div><div class="wide lookup-row"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="workorder-customer-search" list="workorder-customer-list" value="' + escapeHtml(selectedCustomer ? selectedCustomer.label : '') + '" placeholder="Cari customer existing"><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wo-new-customer>+</button></div></div><div class="form-section-title wide">Kendaraan</div><div class="wide lookup-row"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="workorder-vehicle-search" list="workorder-vehicle-list" value="' + escapeHtml(selectedVehicle ? selectedVehicle.label : '') + '" placeholder="Cari kendaraan existing"><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wo-new-vehicle>+</button></div></div><div id="workorder-inline-master-wrap" class="wide"></div><div class="form-section-title wide">Keluhan</div><div class="wide"><input name="Complaint" required value="' + escapeHtml(record.Complaint || record.ComplaintDetail || '') + '" placeholder="Keluhan customer"></div>' + (isStageTwo ? '<div class="form-section-title wide">Barang &amp; Jasa</div><div class="wide"><label>Rincian barang &amp; jasa</label><textarea id="workorder-items" name="WorkItems" class="workorder-items" rows="5" placeholder="Tulis barang &amp; jasa yang digunakan, atau klik shortcut favorit di bawah.">' + escapeHtml(record.WorkItems || '') + '</textarea><div class="workorder-preset-bar">' + workOrderPresetButtons() + '</div></div><div class="workorder-summary-row wide"><div><label>Estimasi biaya</label><input class="money-input" data-fast-price inputmode="numeric" name="EstimatedTotal" value="' + escapeHtml(estimatedTotal) + '" placeholder="0"></div><div></div></div><div class="form-section-title wide">Catatan</div><div class="wide"><input name="Notes" value="' + escapeHtml(record.Notes || '') + '" placeholder="Catatan / keterangan"></div><div class="form-section-title wide">Pengecekan</div><div class="workorder-measure-grid wide"><div class="measure-field"><label>Low press</label><input name="InitialLowPress" value="' + escapeHtml(record.InitialLowPress || '') + '"></div><div class="measure-field"><label>High press</label><input name="InitialHighPress" value="' + escapeHtml(record.InitialHighPress || '') + '"></div><div class="measure-field"><label>Suhu</label><input name="InitialTemp" value="' + escapeHtml(record.InitialTemp || '') + '"></div></div>' : '<div class="register-summary-row wide"><div><label>Rekomendasi awal</label><input name="Recommendation" value="' + escapeHtml(record.Recommendation || '') + '" placeholder="Opsional"></div><div><label>Estimasi harga</label><input class="money-input" data-fast-price inputmode="numeric" name="EstimatedTotal" value="' + escapeHtml(estimatedTotal) + '" placeholder="0"></div></div>') + '<div class="actions">' + actionButtons + '</div></form>';
+        wrap.innerHTML = '<form id="workorder-form" class="record-form wo-form"><input type="hidden" name="WorkOrderNo" value="' + escapeHtml(record.WorkOrderNo || '') + '"><input type="hidden" id="workorder-customer-id" name="CustomerID" value="' + escapeHtml(record.CustomerID || '') + '"><input type="hidden" id="workorder-vehicle-id" name="VehicleID" value="' + escapeHtml(record.VehicleID || '') + '"><input type="hidden" name="ApprovalStatus" value="' + escapeHtml(record.ApprovalStatus || 'PENDING') + '"><datalist id="workorder-customer-list">' + customerOptions + '</datalist><datalist id="workorder-vehicle-list">' + vehicleOptions + '</datalist><div class="wo-form-header wide"><div><span class="wo-form-no">No: ' + escapeHtml(record.WorkOrderNo || 'OTOMATIS') + '</span><strong>Data Work Order</strong></div><label>Cabang <select name="Branch" required><option value="D"' + (branch === 'D' ? ' selected' : '') + '>PERINTIS</option><option value="C"' + (branch === 'C' ? ' selected' : '') + '>CAKALANG</option><option value="M"' + (branch === 'M' ? ' selected' : '') + '>MAMUJU</option></select></label><label>Pickup Date <input class="wo-form-date" name="StartDate" type="date" value="' + escapeHtml(dateInputValue(record.StartDate || todayValue())) + '"></label></div><div class="form-section-title wide">Customer</div><div class="wide lookup-row"><label>Customer (cari customer existing)</label><div class="lookup-field"><input id="workorder-customer-search" list="workorder-customer-list" value="' + escapeHtml(selectedCustomer ? selectedCustomer.label : '') + '" placeholder="Cari customer existing"><button type="button" class="button lookup-button lookup-plus" title="Customer Baru" aria-label="Customer Baru" data-wo-new-customer>+</button></div></div><div class="form-section-title wide">Kendaraan</div><div class="wide lookup-row"><label>Kendaraan (cari kendaraan existing)</label><div class="lookup-field"><input id="workorder-vehicle-search" list="workorder-vehicle-list" value="' + escapeHtml(selectedVehicle ? selectedVehicle.label : '') + '" placeholder="Cari kendaraan existing"><button type="button" class="button lookup-button lookup-plus" title="Kendaraan Baru" aria-label="Kendaraan Baru" data-wo-new-vehicle>+</button></div></div><div id="workorder-inline-master-wrap" class="wide"></div><div class="form-section-title wide">Keluhan</div><div class="wide"><input name="Complaint" required value="' + escapeHtml(record.Complaint || record.ComplaintDetail || '') + '" placeholder="Keluhan customer"></div><div class="form-section-title wide">Barang &amp; Jasa</div><div class="wide"><label>Rincian barang &amp; jasa</label><textarea id="workorder-items" name="WorkItems" class="workorder-items" rows="5" placeholder="Tulis barang &amp; jasa yang digunakan, atau klik shortcut favorit di bawah.">' + escapeHtml(record.WorkItems || '') + '</textarea><div class="workorder-preset-bar">' + workOrderPresetButtons() + '</div></div><div class="workorder-summary-row wide"><div><label>Estimasi biaya</label><input class="money-input" data-fast-price inputmode="numeric" name="EstimatedTotal" value="' + escapeHtml(estimatedTotal) + '" placeholder="0"></div><div></div></div><div class="form-section-title wide">Catatan</div><div class="wide"><input name="Notes" value="' + escapeHtml(record.Notes || '') + '" placeholder="Catatan / keterangan"></div><div class="form-section-title wide">Pengecekan</div><div class="workorder-measure-grid wide"><div class="measure-field"><label>Low press</label><input name="InitialLowPress" value="' + escapeHtml(record.InitialLowPress || '') + '"></div><div class="measure-field"><label>High press</label><input name="InitialHighPress" value="' + escapeHtml(record.InitialHighPress || '') + '"></div><div class="measure-field"><label>Suhu</label><input name="InitialTemp" value="' + escapeHtml(record.InitialTemp || '') + '"></div></div><div class="actions"><button class="button primary">Simpan</button>' + (record.WorkOrderNo && record.Status === 'CHECK' ? '<button type="button" class="button secondary" data-workorder-pending="' + escapeHtml(record.WorkOrderNo) + '">Pending</button><button type="button" class="button secondary" data-workorder-proceed="' + escapeHtml(record.WorkOrderNo) + '">Lanjut Dikerjakan</button><button type="button" class="button secondary" data-workorder-cancel="' + escapeHtml(record.WorkOrderNo) + '">Batalkan WO</button>' : '') + (record.WorkOrderNo && record.Status === 'IN_PROGRESS' ? '<button type="button" class="button secondary" data-workorder-finish="' + escapeHtml(record.WorkOrderNo) + '">Selesaikan WO</button>' : '') + '<button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
         markWorkOrderFormSections();
         openWorkOrderFormTab(record);
         bindWorkOrderLookup(payload, selectedVehicle ? selectedVehicle.id : '');
-        function submitWorkOrderStage(status, openInvoiceAfter) {
+        document.getElementById('workorder-form').addEventListener('submit', function (event) {
+          event.preventDefault();
           applyWorkOrderLookup(payload);
           if (!document.getElementById('workorder-customer-id').value) { alert('Pilih customer dari dropdown atau klik + Customer Baru.'); return; }
           if (!document.getElementById('workorder-vehicle-id').value) { alert('Pilih kendaraan dari dropdown atau klik + Kendaraan Baru.'); return; }
-          var data = formData(document.getElementById('workorder-form'));
-          data.Status = status;
-          google.script.run.withSuccessHandler(function (saved) {
-            closeWorkOrderFormTab(currentWorkOrderMode());
-            refreshWorkOrderViews();
-            loadDashboard();
-            if (openInvoiceAfter && saved && saved.WorkOrderNo) editInvoice(saved.WorkOrderNo);
-          }).withFailureHandler(failure).workOrderSave(data);
-        }
-        if (document.getElementById('workorder-checkin')) document.getElementById('workorder-checkin').addEventListener('click', function () { submitWorkOrderStage('IN_PROGRESS', false); });
-        if (document.getElementById('workorder-save-pending')) document.getElementById('workorder-save-pending').addEventListener('click', function () { submitWorkOrderStage('PENDING', false); });
-        if (document.getElementById('workorder-go-payment')) document.getElementById('workorder-go-payment').addEventListener('click', function () { submitWorkOrderStage('DONE', true); });
-        if (document.getElementById('workorder-back-pending')) document.getElementById('workorder-back-pending').addEventListener('click', function () { submitWorkOrderStage('PENDING', false); });
+          google.script.run.withSuccessHandler(function () { closeWorkOrderFormTab(currentWorkOrderMode()); refreshWorkOrderViews(); loadDashboard(); }).withFailureHandler(failure).workOrderSave(formData(event.target));
+        });
       }).withFailureHandler(failure).workOrderFormOptions();
     }
 
@@ -1619,34 +1188,42 @@
     }
 
     function finishWorkOrder(workOrderNo) {
-      google.script.run.withSuccessHandler(editWorkOrder).withFailureHandler(failure).workOrderGet(workOrderNo);
+      var wrap = currentWorkOrderWrap();
+      wrap.innerHTML = '<form id="workorder-finish-form" class="record-form"><input type="hidden" name="WorkOrderNo" value="' + escapeHtml(workOrderNo) + '"><div><label>Low press akhir</label><input name="FinalLowPress"></div><div><label>High press akhir</label><input name="FinalHighPress"></div><div><label>Suhu akhir</label><input name="FinalTemp"></div><div class="wide"><label>Catatan penyelesaian</label><input name="Notes" placeholder="Opsional"></div><div class="actions"><button class="button primary">Tandai Selesai</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
+      openWorkOrderFormTab({ WorkOrderNo: workOrderNo });
+      document.getElementById('workorder-finish-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        var data = formData(event.target);
+        google.script.run.withSuccessHandler(function () { closeWorkOrderFormTab(currentWorkOrderMode()); refreshWorkOrderViews(); loadDashboard(); }).withFailureHandler(failure).workOrderFinish(data.WorkOrderNo, data.Notes, data);
+      });
     }
 
     function workOrderActions(row) {
       var no = escapeHtml(row.WorkOrderNo);
-      var open = '<button class="row-action" data-workorder="' + no + '">Buka</button>';
       var edit = '<button class="row-action row-action-icon row-action-edit" title="Edit" aria-label="Edit" data-workorder="' + no + '">&#9998;</button>';
       var remove = row.InvoiceNo ? '' : ' <button class="row-action row-action-icon row-action-danger" title="Hapus" aria-label="Hapus" data-workorder-delete="' + no + '">&#128465;</button>';
-      if (row.Status === 'PENDING') return open + ' ' + edit + remove;
-      if (row.Status === 'IN_PROGRESS') return open + ' ' + edit;
-      if (row.Status === 'DONE' || row.Status === 'PAID' || row.Status === 'CANCELLED') return open;
-      return open + ' ' + edit + remove;
+      if (row.Status === 'CHECK') return '<button class="row-action" data-workorder-proceed="' + no + '">Lanjut</button> ' + edit + remove;
+      if (row.Status === 'IN_PROGRESS') return '<button class="row-action row-action-finish" data-workorder-finish="' + no + '">Finish</button> ' + edit + remove;
+      if (row.Status === 'FINISHED' && !row.InvoiceNo) return '<button class="row-action" data-invoice-workorder="' + no + '">Buat Invoice</button> ' + edit + remove;
+      return edit + remove;
     }
 
     function workOrderStatusLabel(status) {
+      if (status === 'IN_PROGRESS') return 'CHECK_IN';
+      if (status === 'FINISHED') return 'CHECK_OUT';
       return status || '';
     }
 
     function workOrderStatusClass(status) {
       if (status === 'IN_PROGRESS') return ' status-check-in';
-      if (status === 'DONE') return ' status-check-out';
+      if (status === 'FINISHED') return ' status-check-out';
       return '';
     }
 
     function renderWorkOrderRow(row) {
       var actions = workOrderActions(row);
       var statusLabel = workOrderStatusLabel(row.Status);
-      var statusBadge = statusLabel === 'DONE' ? '' : '<span class="status' + workOrderStatusClass(row.Status) + '">' + escapeHtml(statusLabel) + '</span>';
+      var statusBadge = statusLabel === 'CHECK_OUT' ? '' : '<span class="status' + workOrderStatusClass(row.Status) + '">' + escapeHtml(statusLabel) + '</span>';
       return '<tr class="wo-mobile-card">'
         + '<td data-label="WO" class="wo-mobile-main"><strong>' + escapeHtml(row.WorkOrderNo) + '</strong><span class="wo-mobile-head-right">' + statusBadge + '<span class="wo-mobile-inline-actions">' + actions + '</span></span><div class="wo-mobile-summary"><div class="wo-mobile-vehicle-line"><strong>' + escapeHtml(row.PlateNumber) + '</strong><span>' + escapeHtml(row.VehicleName) + '</span></div><div>' + escapeHtml(row.CustomerName) + ' <span class="muted">' + escapeHtml(row.Phone) + '</span></div><div>Keluhan: ' + escapeHtml(row.Complaint) + '</div>' + (row.WorkItems ? '<div>Barang/Jasa: ' + escapeHtml(String(row.WorkItems).replace(/\n+/g, ' • ')) + '</div>' : '') + '</div></td>'
         + '<td data-label="Tanggal" class="wo-mobile-extra">' + escapeHtml(row.StartDateText) + '</td>'
@@ -1680,7 +1257,7 @@
       };
       if (filter.status === 'ACTIVE') filter.status = 'ALL';
       google.script.run.withSuccessHandler(function (rows) {
-        if (isActive) rows = rows.filter(function (row) { return row.Status === 'PENDING' || row.Status === 'IN_PROGRESS'; });
+        if (isActive) rows = rows.filter(function (row) { return row.Status === 'CHECK' || row.Status === 'IN_PROGRESS'; });
         countEl.textContent = rows.length + (isActive ? ' WO aktif' : ' work order');
         tableEl.innerHTML = rows.length ? rows.map(renderWorkOrderRow).join('') : '<tr><td colspan="8" class="muted">' + (isActive ? 'Tidak ada WO aktif.' : 'Belum ada Work Order.') + '</td></tr>';
       }).withFailureHandler(failure).workOrderList(filter);
@@ -1793,44 +1370,19 @@
     }
 
     function editInvoice(selectedWorkOrderNo) {
-      if (!selectedWorkOrderNo) {
-        google.script.run.withSuccessHandler(function (payload) {
-          var options = '<option value="">Pilih WO selesai</option>' + payload.workOrders.map(function (wo) {
-            return '<option value="' + escapeHtml(wo.WorkOrderNo) + '">' + escapeHtml(wo.WorkOrderNo + ' - ' + wo.PlateNumber + ' - ' + rupiah(wo.EstimatedTotal)) + '</option>';
-          }).join('');
-          var wrap = document.getElementById('invoice-form-wrap');
-          wrap.innerHTML = '<form id="invoice-select-form" class="record-form"><div class="form-section-title wide">Buka Invoice</div><div class="wide"><label>Work Order selesai</label><select name="WorkOrderNo" required>' + options + '</select></div><div class="actions"><button class="button primary">Lanjut</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
-          openInvoiceFormTab('Invoice');
-          document.getElementById('invoice-select-form').addEventListener('submit', function (event) {
-            event.preventDefault();
-            var data = formData(event.target);
-            if (!data.WorkOrderNo) { alert('Pilih WO dulu.'); return; }
-            editInvoice(data.WorkOrderNo);
-          });
-        }).withFailureHandler(failure).invoiceFormOptions();
-        return;
-      }
-      google.script.run.withSuccessHandler(function (invoice) {
+      google.script.run.withSuccessHandler(function (payload) {
+        var options = '<option value="">Pilih WO selesai</option>' + payload.workOrders.map(function (wo) {
+          return '<option value="' + escapeHtml(wo.WorkOrderNo) + '"' + (wo.WorkOrderNo === selectedWorkOrderNo ? ' selected' : '') + '>' + escapeHtml(wo.WorkOrderNo + ' - ' + wo.PlateNumber + ' - ' + rupiah(wo.EstimatedTotal)) + '</option>';
+        }).join('');
+        var selected = payload.workOrders.filter(function (wo) { return wo.WorkOrderNo === selectedWorkOrderNo; })[0] || {};
         var wrap = document.getElementById('invoice-form-wrap');
-        var detailRows = (invoice.Details || []).length ? invoice.Details.map(function (line) {
-          return '<tr><td>' + escapeHtml(line.ItemName || '') + '</td><td>' + escapeHtml(line.GroupName || '') + '</td><td>' + escapeHtml(String(line.Qty || 1)) + '</td><td>' + escapeHtml(rupiah(line.Price || 0)) + '</td><td>' + escapeHtml(rupiah(line.Subtotal || 0)) + '</td></tr>';
-        }).join('') : '<tr><td colspan="5" class="muted">Belum ada detail item.</td></tr>';
-        wrap.innerHTML = '<div class="record-form"><div class="form-section-title wide">Invoice + Pembayaran</div><div><label>No. Invoice</label><input value="' + escapeHtml(invoice.InvoiceNo || '') + '" readonly></div><div><label>Tanggal</label><input value="' + escapeHtml(invoice.InvoiceDateText || '') + '" readonly></div><div><label>No. WO</label><input value="' + escapeHtml(invoice.WorkOrderNo || '') + '" readonly></div><div><label>Customer</label><input value="' + escapeHtml(invoice.CustomerName || '') + '" readonly></div><div><label>Kendaraan</label><input value="' + escapeHtml((invoice.PlateNumber || '') + ' ' + (invoice.VehicleName || '')) + '" readonly></div><div class="wide"><label>Rincian Item</label><div class="table-wrap"><table><thead><tr><th>Item</th><th>Jenis</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead><tbody>' + detailRows + '</tbody></table></div></div><div><label>Total Tagihan</label><input value="' + escapeHtml(rupiah(invoice.GrandTotal || 0)) + '" readonly></div><div><label>Terbayar</label><input value="' + escapeHtml(rupiah(invoice.PaidAmount || 0)) + '" readonly></div><div><label>Sisa</label><input value="' + escapeHtml(rupiah(invoice.Balance || 0)) + '" readonly></div><div><label>Status</label><input value="' + escapeHtml(invoice.Status || '') + '" readonly></div><form id="invoice-payment-form" class="wide" style="display:contents"><input type="hidden" name="InvoiceNo" value="' + escapeHtml(invoice.InvoiceNo || '') + '"><div><label>Tanggal pembayaran</label><input name="PaymentDate" type="date" value="' + todayValue() + '"></div><div><label>Metode</label><select name="Method"><option value="CASH">Tunai</option><option value="QRIS">QRIS</option><option value="CREDIT">Kredit</option></select></div><div><label>Nominal bayar</label><input name="Amount" inputmode="numeric" placeholder="0"></div><div class="wide"><label>Referensi / catatan</label><input name="ReferenceNo" placeholder="Opsional"></div><div class="actions"><button type="submit" class="button primary">Simpan Pembayaran</button><button type="button" class="button secondary" id="invoice-close-only">Tutup</button></div></form></div>';
-        openInvoiceFormTab(invoice.InvoiceNo || 'Invoice');
-        document.getElementById('invoice-close-only').addEventListener('click', function () { closeInvoiceFormTab(); });
-        document.getElementById('invoice-payment-form').addEventListener('submit', function (event) {
+        wrap.innerHTML = '<form id="invoice-form" class="record-form"><div class="form-section-title wide">Data Invoice</div><div><label>Tanggal invoice</label><input name="InvoiceDate" type="date" required value="' + todayValue() + '"></div><div><label>Work Order</label><select name="WorkOrderNo" required>' + options + '</select></div><div><label>Total tagihan</label><input name="GrandTotal" type="number" min="1" required value="' + escapeHtml(selected.EstimatedTotal || '') + '"></div><div class="actions"><button class="button primary">Buat Invoice</button><button type="button" class="button secondary" data-cancel>Batalkan</button></div></form>';
+        openInvoiceFormTab('Data Baru');
+        document.getElementById('invoice-form').addEventListener('submit', function (event) {
           event.preventDefault();
-          var data = formData(event.target);
-          if (!cleanNumber(data.Amount || '')) { alert('Isi nominal pembayaran dulu.'); return; }
-          google.script.run.withSuccessHandler(function () {
-            closeInvoiceFormTab();
-            loadPayments();
-            loadInvoices();
-            refreshWorkOrderViews();
-            loadDashboard();
-          }).withFailureHandler(failure).paymentSave(data);
+          google.script.run.withSuccessHandler(function () { closeInvoiceFormTab(); loadInvoices(); refreshWorkOrderViews(); loadDashboard(); }).withFailureHandler(failure).invoiceCreate(formData(event.target));
         });
-      }).withFailureHandler(failure).invoiceOpenFromWorkOrder(selectedWorkOrderNo);
+      }).withFailureHandler(failure).invoiceFormOptions();
     }
 
     function loadInvoices() {

@@ -1,36 +1,149 @@
-# DACM ERP 2.0
+# DACM ERP
+## System Architecture
 
-## Project
+Version : 1.0
+Author : Alexander & ChatGPT
+Platform : Google Apps Script + Google Sheets
+Frontend : HTML + Bootstrap 5
+Backend : Google Apps Script
+Repository : GitHub
 
-Dokter AC Mobil ERP
+---
 
-## Architecture
+# 1. Overview
 
-Frontend
-- HTML
-- CSS
-- JavaScript
+DACM ERP adalah sistem ERP internal Dokter AC Mobil yang digunakan untuk mengelola seluruh proses operasional bengkel mulai dari pelanggan datang hingga pembayaran selesai.
 
-Backend
-- Google Apps Script
+---
 
-Database
-- Google Spreadsheet
+# 2. System Layers
 
-Repository
-- GitHub
+┌──────────────────────────────┐
+│ Browser                      │
+│ HTML + Bootstrap + JS        │
+└──────────────┬───────────────┘
+               │
+google.script.run
+               │
+┌──────────────▼───────────────┐
+│ Google Apps Script           │
+│ Business Logic               │
+└──────────────┬───────────────┘
+               │
+┌──────────────▼───────────────┐
+│ Google Spreadsheet           │
+│ Database                     │
+└──────────────────────────────┘
 
-Editor
-- Visual Studio Code
+---
 
-## Branch
+# 3. Modules
+
+Core
+
+- Authentication
+- Session
+- Permission
+- Dashboard
+
+Master
+
+- Branch
+- User
+- Customer
+- Vehicle
+
+Transaction
+
+- Register
+- Diagnosis
+- Work Order
+- Invoice
+- Payment
+
+Report
+
+- Dashboard
+- Daily Report
+- Monthly Report
+- Customer History
+
+Setting
+
+- User
+- Branch
+- System
+
+---
+
+# 4. Folder Structure
+
+docs/
+
+database/
+
+src/
+
+assets/
+
+---
+
+# 5. Database
+
+Google Spreadsheet
+
+One Sheet = One Table
+
+No Merge Cell
+
+No Formula pada tabel transaksi
+
+Semua validasi dilakukan oleh aplikasi.
+
+---
+
+# 6. Coding Standard
+
+camelCase
+
+PascalCase
+
+Upper Snake Case untuk Constant
+
+---
+
+# 7. Git Flow
 
 main
-Production
 
 develop
-Development
 
-## Version
+feature/*
 
-2.0.0
+hotfix/*
+
+---
+
+# 8. Deployment
+
+VS Code
+
+↓
+
+Git Commit
+
+↓
+
+GitHub
+
+↓
+
+clasp push
+
+↓
+
+Apps Script
+
+↓
+
+Production

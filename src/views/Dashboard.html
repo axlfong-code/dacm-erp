@@ -1,0 +1,135 @@
+<div class="shell">
+  <?!= include('Sidebar'); ?>
+  <section class="main-panel">
+    <header class="topbar">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Buka navigasi">☰</button>
+      <div><p class="eyebrow">OPERASIONAL BENGKEL</p><h1 id="page-title">Dashboard</h1></div>
+      <div class="user-chip"><span id="user-initial">U</span><div><strong id="user-name">User</strong><small id="user-role"></small></div></div>
+    </header>
+    <main class="content">
+      <section id="dashboard-view" class="view">
+        <div class="welcome"><div><h2>Selamat datang, <span id="welcome-name">User</span>.</h2><p>Ringkasan Work Order, stok, invoice, dan aktivitas bengkel hari ini.</p></div><button class="button primary" id="workorder-new-dashboard">+ Work Order Baru</button></div>
+        <div id="dashboard-status" class="loading">Memuat ringkasan…</div>
+        <div class="stat-grid" id="stat-grid" hidden></div>
+        <section class="panel" id="recent-panel" hidden><div class="panel-head"><h2>WO Terbaru</h2><button class="link-button" data-view="workorder">Lihat semua</button></div><div class="table-wrap"><table><thead><tr><th>No. WO</th><th>Tanggal</th><th>Customer</th><th>Kendaraan</th><th>Keluhan</th><th>Status</th></tr></thead><tbody id="recent-workorders"></tbody></table></div></section>
+      </section>
+
+      <section id="customers-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">MASTER DATA</p><h2>Pelanggan</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-customer-tabs><button class="module-tab module-tab-icon active" type="button" data-customer-tab="list">☷</button><button class="module-tab" id="customer-form-tab" type="button" data-customer-tab="form" hidden>Data Baru <span data-customer-close-form>×</span></button></div>
+          <div id="customer-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><select id="customer-nonactive-filter"><option value="ALL">Non Aktif: Semua</option><option value="NO">Non Aktif: Tidak</option><option value="YES">Non Aktif: Ya</option></select><select id="customer-category-filter"><option value="">Kategori: Semua</option><option value="Pelanggan Cakalang">Pelanggan Cakalang</option><option value="Pelanggan Hertasning">Pelanggan Hertasning</option><option value="Pelanggan Mamuju">Pelanggan Mamuju</option><option value="Pelanggan Perintis">Pelanggan Perintis</option><option value="Umum">Umum</option></select><button type="button" class="button filter-button">▽</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="customer-new">+</button><button type="button" class="button secondary icon-button" id="customer-refresh">↻</button><span id="customer-count" class="muted wo-count"></span><div class="wo-search"><input id="customer-search" placeholder="Ketik dan [Enter]"><span>🔍</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>ID</th><th>Nama</th><th>Telepon</th><th>WhatsApp</th><th>Alamat</th><th>Aksi</th></tr></thead><tbody id="customer-table"></tbody></table></div>
+          </div>
+          <div id="customer-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="vehicles-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">MASTER DATA</p><h2>Kendaraan</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-vehicle-tabs><button class="module-tab module-tab-icon active" type="button" data-vehicle-tab="list">☷</button><button class="module-tab" id="vehicle-form-tab" type="button" data-vehicle-tab="form" hidden>Data Baru <span data-vehicle-close-form>×</span></button></div>
+          <div id="vehicle-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><select id="vehicle-customer-filter"><option value="">Pelanggan: Semua</option></select><select id="vehicle-brand-filter"><option value="">Merek: Semua</option></select><button type="button" class="button filter-button">▽</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="vehicle-new">+</button><button type="button" class="button secondary icon-button" id="vehicle-refresh">↻</button><span id="vehicle-count" class="muted wo-count"></span><div class="wo-search"><input id="vehicle-search" placeholder="Ketik dan [Enter]"><span>🔍</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>No. Polisi</th><th>Pelanggan</th><th>Kendaraan</th><th>Tahun</th><th>KM Terakhir</th><th>Aksi</th></tr></thead><tbody id="vehicle-table"></tbody></table></div>
+          </div>
+          <div id="vehicle-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="workorder-active-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">PUSAT OPERASIONAL</p><h2>WO Aktif</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-wo-tabs="active"><button class="module-tab module-tab-icon active" type="button" data-wo-tab="list">☷</button><button class="module-tab" id="workorder-active-form-tab" type="button" data-wo-tab="form" hidden>Data Baru <span data-wo-close-form="active">×</span></button></div>
+          <div id="workorder-active-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><select id="workorder-active-status"><option value="ACTIVE">Status: WO aktif</option><option value="CHECK">Status: Check</option><option value="IN_PROGRESS">Status: Dikerjakan</option></select><button type="button" class="button filter-button">▽</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="workorder-new">+</button><button type="button" class="button secondary icon-button" data-workorder-refresh="active">↻</button><span id="workorder-active-count" class="muted wo-count"></span><div class="wo-search"><input id="workorder-active-search" placeholder="Ketik dan [Enter]"><span>🔍</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>No. WO</th><th>Tanggal</th><th>Customer</th><th>Kendaraan</th><th>Keluhan</th><th>Status</th><th>Invoice</th><th>Aksi</th></tr></thead><tbody id="workorder-active-table"></tbody></table></div>
+          </div>
+          <div id="workorder-active-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="workorder-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">PUSAT OPERASIONAL</p><h2>Work Order</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-wo-tabs="list"><button class="module-tab module-tab-icon active" type="button" data-wo-tab="list">☷</button><button class="module-tab" id="workorder-form-tab" type="button" data-wo-tab="form" hidden>Data Baru <span data-wo-close-form="list">×</span></button></div>
+          <div id="workorder-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><div class="date-filter-wrap"><button type="button" class="date-filter-button" id="workorder-date-filter-button">Tanggal: Semua</button><input type="hidden" id="workorder-date-mode" value="ALL"><input type="hidden" id="workorder-date-from" value=""><input type="hidden" id="workorder-date-to" value=""><input type="hidden" id="workorder-date-duration" value=""><input type="hidden" id="workorder-date-unit" value="MONTH"><div class="date-filter-popover" id="workorder-date-popover" hidden><button type="button" class="link-button date-clear" id="workorder-date-clear">⊗ Kosongkan Pilihan</button><label class="date-option"><input type="radio" name="wo-date-filter-mode" value="FROM" checked> Dari tanggal</label><div id="workorder-date-from-menu"><input type="date" id="workorder-date-from-input"><label class="date-option"><input type="checkbox" id="workorder-date-use-to"> Hingga tanggal</label><input type="date" id="workorder-date-to-input" hidden></div><label class="date-option"><input type="radio" name="wo-date-filter-mode" value="LAST"> Dalam durasi waktu terakhir</label><div class="date-duration-row" id="workorder-date-last-menu" hidden><input type="number" min="0" id="workorder-date-duration-input" value="0"><label><input type="radio" name="wo-date-unit" value="DAY"> Hari</label><label><input type="radio" name="wo-date-unit" value="WEEK"> Minggu</label><label><input type="radio" name="wo-date-unit" value="MONTH" checked> Bulan</label></div><div class="date-actions"><button type="button" class="button primary" id="workorder-date-apply">Update</button></div></div></div><select id="workorder-customer-filter"><option value="">Pelanggan: Semua</option></select><select id="workorder-status"><option value="ALL">Status: Semua</option><option value="CHECK">Status: Check</option><option value="IN_PROGRESS">Status: Dikerjakan</option><option value="FINISHED">Status: Selesai</option><option value="CANCELLED">Status: Batal</option></select><button type="button" class="button filter-button">▽</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="workorder-new">+</button><button type="button" class="button secondary icon-button" data-workorder-refresh="list">↻</button><span id="workorder-count" class="muted wo-count"></span><div class="wo-search"><input id="workorder-search" placeholder="Ketik dan [Enter]"><span>🔍</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>No. WO</th><th>Tanggal</th><th>Customer</th><th>Kendaraan</th><th>Keluhan</th><th>Status</th><th>Invoice</th><th>Aksi</th></tr></thead><tbody id="workorder-table"></tbody></table></div>
+          </div>
+          <div id="workorder-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="wofast-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">TEST FORMAT NOTA</p><h2>WO Cepat</h2></div></div>
+        <section class="panel master-panel">
+          <div id="wofast-status" class="loading">Memuat format WO cepat…</div>
+          <div id="wofast-wrap"></div>
+        </section>
+      </section>
+
+      <section id="invoice-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">PENAGIHAN</p><h2>Invoice</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-invoice-tabs><button class="module-tab module-tab-icon active" type="button" data-invoice-tab="list">☷</button><button class="module-tab" id="invoice-form-tab" type="button" data-invoice-tab="form" hidden>Data Baru <span data-invoice-close-form>×</span></button></div>
+          <div id="invoice-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><div class="date-filter-wrap"><button type="button" class="date-filter-button" id="invoice-date-filter-button">Tanggal: Semua</button><input type="hidden" id="invoice-date-mode" value="ALL"><input type="hidden" id="invoice-date-from" value=""><input type="hidden" id="invoice-date-to" value=""><input type="hidden" id="invoice-date-duration" value=""><input type="hidden" id="invoice-date-unit" value="MONTH"><div class="date-filter-popover" id="invoice-date-popover" hidden><button type="button" class="link-button date-clear" id="invoice-date-clear">⊗ Kosongkan Pilihan</button><label class="date-option"><input type="radio" name="invoice-date-filter-mode" value="FROM" checked> Dari tanggal</label><div id="invoice-date-from-menu"><input type="date" id="invoice-date-from-input"><label class="date-option"><input type="checkbox" id="invoice-date-use-to"> Hingga tanggal</label><input type="date" id="invoice-date-to-input" hidden></div><label class="date-option"><input type="radio" name="invoice-date-filter-mode" value="LAST"> Dalam durasi waktu terakhir</label><div class="date-duration-row" id="invoice-date-last-menu" hidden><input type="number" min="0" id="invoice-date-duration-input" value="0"><label><input type="radio" name="invoice-date-unit" value="DAY"> Hari</label><label><input type="radio" name="invoice-date-unit" value="WEEK"> Minggu</label><label><input type="radio" name="invoice-date-unit" value="MONTH" checked> Bulan</label></div><div class="date-actions"><button type="button" class="button primary" id="invoice-date-apply">Update</button></div></div></div><select id="invoice-status-filter"><option value="ALL">Status: Semua</option><option value="UNPAID">Status: Belum Bayar</option><option value="PARTIAL">Status: Sebagian</option><option value="PAID">Status: Lunas</option></select><button type="button" class="button filter-button">▽</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="invoice-new">+</button><button type="button" class="button secondary icon-button" id="invoice-refresh">↻</button><span id="invoice-count" class="muted wo-count"></span><div class="wo-search"><input id="invoice-search" placeholder="Ketik dan [Enter]"><span>🔍</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>No. Invoice</th><th>Tanggal</th><th>No. WO</th><th>Customer</th><th>Kendaraan</th><th>Total</th><th>Terbayar</th><th>Sisa</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="invoice-table"></tbody></table></div>
+          </div>
+          <div id="invoice-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="payment-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">PENERIMAAN KAS</p><h2>Pembayaran</h2></div><button class="button primary" id="payment-new">+ Terima Pembayaran</button></div>
+        <section class="panel master-panel"><div class="toolbar"><input id="payment-search" placeholder="Cari invoice"><span id="payment-count" class="muted"></span></div><div id="payment-form-wrap" hidden></div><div class="table-wrap"><table><thead><tr><th>No. Pembayaran</th><th>Invoice</th><th>Tanggal</th><th>Metode</th><th>Referensi</th><th>Nominal</th></tr></thead><tbody id="payment-table"></tbody></table></div></section>
+      </section>
+
+      <section id="items-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">MASTER INVENTORI</p><h2>Stok Barang</h2></div></div>
+        <section class="panel master-panel wo-workspace">
+          <div class="module-tabs" data-item-tabs><button class="module-tab module-tab-icon active" type="button" data-item-tab="list">&#9776;</button><button class="module-tab" id="item-form-tab" type="button" data-item-tab="form" hidden>Data Baru <span data-item-close-form>&times;</span></button></div>
+          <div id="item-list-panel" class="wo-tab-panel">
+            <div class="wo-toolbar"><div class="wo-filter-group"><select id="item-category-filter"><option value="">Kategori Barang: Semua</option><option value="Umum">Kategori Barang: Umum</option><option value="AC">Kategori Barang: AC</option><option value="Spare Part">Kategori Barang: Spare Part</option><option value="Jasa">Kategori Barang: Jasa</option></select><select id="item-type-filter"><option value="">Jenis Barang: Semua</option><option value="INVENTORY">Jenis Barang: Persediaan</option><option value="NON_INVENTORY">Jenis Barang: Non Persediaan</option><option value="JASA">Jenis Barang: Jasa</option></select><select id="item-status-filter"><option value="">Non Aktif: Semua</option><option value="ACTIVE">Non Aktif: Tidak</option><option value="INACTIVE">Non Aktif: Ya</option></select><button type="button" class="button filter-button">&#9662;</button></div><div class="wo-action-row"><button type="button" class="button primary wo-add-button" id="item-new">+</button><button type="button" class="button secondary icon-button" id="item-refresh">&#8635;</button><span id="item-count" class="muted wo-count"></span><div class="wo-search"><input id="item-search" placeholder="Ketik dan [Enter]"><span>&#128269;</span></div></div></div>
+            <div class="table-wrap wo-table-wrap"><table class="wo-grid-table"><thead><tr><th>Kode Barang</th><th>Nama Barang</th><th>Stok</th><th>Satuan</th><th>Jenis Barang</th><th>Harga Jual</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="item-table"></tbody></table></div>
+          </div>
+          <div id="item-form-wrap" class="wo-tab-panel" hidden></div>
+        </section>
+      </section>
+
+      <section id="stock-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">INVENTORI</p><h2>Stok</h2></div><button class="button primary" id="stock-adjust">± Sesuaikan Stok</button></div>
+        <section class="panel master-panel"><div class="toolbar"><input id="stock-search" placeholder="Cari item atau cabang"><span id="stock-count" class="muted"></span></div><div id="stock-form-wrap" hidden></div><div class="table-wrap"><table><thead><tr><th>Item</th><th>Cabang</th><th>Jumlah</th><th>Satuan</th><th>Minimum</th><th>Status</th></tr></thead><tbody id="stock-table"></tbody></table></div></section>
+      </section>
+
+      <section id="suppliers-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">MASTER PEMBELIAN</p><h2>Supplier</h2></div><button class="button primary" id="supplier-new">+ Supplier Baru</button></div>
+        <section class="panel master-panel"><div class="toolbar"><input id="supplier-search" placeholder="Cari supplier atau kontak"><span id="supplier-count" class="muted"></span></div><div id="supplier-form-wrap" hidden></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Nama</th><th>Telepon</th><th>Kontak</th><th>Status</th><th></th></tr></thead><tbody id="supplier-table"></tbody></table></div></section>
+      </section>
+
+      <section id="purchase-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">PEMBELIAN INVENTORI</p><h2>Pembelian</h2></div><button class="button primary" id="purchase-new">+ Terima Barang</button></div>
+        <section class="panel master-panel"><div class="toolbar"><input id="purchase-search" placeholder="Cari no pembelian, supplier, atau item"><span id="purchase-count" class="muted"></span></div><div id="purchase-form-wrap" hidden></div><div class="table-wrap"><table><thead><tr><th>No. Pembelian</th><th>Tanggal</th><th>Supplier</th><th>Item</th><th>Jumlah</th><th>Total</th><th>Status</th></tr></thead><tbody id="purchase-table"></tbody></table></div></section>
+      </section>
+
+      <section id="ai-view" class="view" hidden>
+        <div class="panel-head"><div><p class="eyebrow">ASISTEN OPERASIONAL</p><h2>Chat AI</h2></div></div>
+        <section class="panel master-panel ai-panel">
+          <div class="ai-thread" id="ai-thread">
+            <div class="ai-message ai-message-assistant">
+              <strong>DACM AI</strong>
+              <p>Saya siap menjadi asisten bengkel. Saya bisa bantu cari data dan membuat draft transaksi/update data ERP.</p>
+              <p class="muted">Setiap perintah simpan/update tetap perlu konfirmasi sebelum dijalankan.</p>
+            </div>
+          </div>
+          <form id="ai-chat-form" class="ai-chat-form">
+            <input id="ai-chat-input" placeholder="Tulis pertanyaan atau perintah, contoh: cari WO DD 1385 V" autocomplete="off">
+            <button class="button primary" type="submit">Kirim</button>
+          </form>
+        </section>
+      </section>
+    </main>
+  </section>
+</div>

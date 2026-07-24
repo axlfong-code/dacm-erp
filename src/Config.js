@@ -1,25 +1,28 @@
-/******************************************************
+/**
  * DACM ERP Configuration
- ******************************************************/
+ * Version 1.0
+ */
 
-const CONFIG = {
+const APP = {
+  NAME: "DACM ERP",
+  VERSION: "1.0.0",
+  COMPANY: "Dokter AC Mobil"
+};
 
-  SPREADSHEET_ID : "1feij0mcZiUx_BtZjc0aRusQ_Ott5J4B3v0MslDN90C8",
-
-  SHEET : {
-
-    USER : "02_MasterUser",
-
-    CUSTOMER : "03_Customer",
-
-    VEHICLE : "04_Kendaraan",
-
-    REGISTER : "05_Register",
-
-    DIAGNOSA : "06_Diagnosa",
-
-    INVOICE : "07_Invoice"
-
-  }
-
+const SHEETS = {
+  BRANCH: "01_BRANCH",
+  USERS: "02_USERS",
+  ROLES: "03_ROLES",
+  CUSTOMERS: "04_CUSTOMERS",
+  VEHICLES: "05_VEHICLES",
+  REGISTER: "06_REGISTER",
+  DIAGNOSIS: "07_DIAGNOSIS",
+  APPROVAL: "08_APPROVAL",
+  WORKORDER: "09_WORKORDER",
+  QC: "10_QC",
+  INVOICE: "11_INVOICE",
+  PAYMENT: "12_PAYMENT",
+  ITEMS: "13_ITEMS",
+  STOCK: "14_STOCK",
+  LOG: "15_LOG"
 };
